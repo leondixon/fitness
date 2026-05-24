@@ -8,8 +8,8 @@ type LoggedSet = {
   index: number
   warmup: boolean
   previous: string
-  kg: string
-  reps: string
+  kg: string | number
+  reps: string | number
   done: boolean
 }
 
@@ -26,7 +26,9 @@ const props = withDefaults(
 
 const loggedSets = ref<LoggedSet[]>([])
 
-const canCompleteSet = (set: LoggedSet) => set.kg.trim() !== '' && set.reps.trim() !== ''
+const hasValue = (value: string | number) => String(value).trim() !== ''
+
+const canCompleteSet = (set: LoggedSet) => hasValue(set.kg) && hasValue(set.reps)
 
 const setLabel = (index: number) => {
   const set = loggedSets.value[index]
