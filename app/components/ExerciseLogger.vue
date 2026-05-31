@@ -1,10 +1,10 @@
 <script setup lang="ts">
-type ExerciseLoggerSet = {
+interface ExerciseLoggerSet {
   previous?: string
   warmup?: boolean
 }
 
-type LoggedSet = {
+interface LoggedSet {
   index: number
   warmup: boolean
   previous: string
@@ -30,14 +30,14 @@ const hasValue = (value: string | number) => String(value).trim() !== ''
 
 const canCompleteSet = (set: LoggedSet) => hasValue(set.kg) && hasValue(set.reps)
 
-const setLabel = (index: number) => {
+function setLabel(index: number) {
   const set = loggedSets.value[index]
 
-  if (set.warmup) {
+  if (set?.warmup) {
     return 'W'
   }
 
-  return loggedSets.value.slice(0, index + 1).filter((entry) => !entry.warmup).length.toString()
+  return loggedSets.value.slice(0, index + 1).filter(entry => !entry.warmup).length.toString()
 }
 
 watch(
@@ -78,7 +78,9 @@ watch(
     aria-labelledby="exercise-logger-title"
   >
     <div class="mb-5">
-      <p class="mb-1 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Exercise</p>
+      <p class="mb-1 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">
+        Exercise
+      </p>
       <h2 id="exercise-logger-title" class="text-[clamp(1.5rem,3vw,2rem)] text-slate-900">
         {{ exerciseName }}
       </h2>
@@ -97,11 +99,9 @@ watch(
       </div>
 
       <div
-        v-for="(set, index) in loggedSets"
-        :key="set.index"
+        v-for="(set, index) in loggedSets" :key="set.index"
         class="grid grid-cols-[44px_minmax(88px,1fr)_minmax(64px,88px)_minmax(64px,88px)_48px] items-center gap-1.5 rounded-[14px] px-2 py-2.5 sm:grid-cols-[56px_minmax(110px,1fr)_minmax(80px,110px)_minmax(80px,110px)_64px] sm:gap-2.5 sm:px-3"
-        :class="set.done ? 'bg-emerald-50' : 'bg-slate-50'"
-        role="row"
+        :class="set.done ? 'bg-emerald-50' : 'bg-slate-50'" role="row"
       >
         <strong role="cell">{{ setLabel(index) }}</strong>
         <span class="font-semibold text-slate-600" role="cell">{{ set.previous }}</span>
@@ -110,32 +110,22 @@ watch(
           <input
             v-model="set.kg"
             class="box-border w-full rounded-[10px] border border-slate-300 bg-white p-2.5 font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
-            type="number"
-            min="0"
-            step="0.5"
-            inputmode="decimal"
-            placeholder="0"
-          />
+            type="number" min="0" step="0.5" inputmode="decimal" placeholder="0"
+          >
         </label>
         <label role="cell">
           <span class="sr-only">Reps for set {{ setLabel(index) }}</span>
           <input
             v-model="set.reps"
             class="box-border w-full rounded-[10px] border border-slate-300 bg-white p-2.5 font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
-            type="number"
-            min="0"
-            step="1"
-            inputmode="numeric"
-            placeholder="0"
-          />
+            type="number" min="0" step="1" inputmode="numeric" placeholder="0"
+          >
         </label>
         <label class="grid place-items-center" role="cell">
           <input
-            v-model="set.done"
-            class="size-[22px] accent-green-600 disabled:cursor-not-allowed disabled:opacity-45"
-            type="checkbox"
-            :disabled="!canCompleteSet(set)"
-          />
+            v-model="set.done" class="size-[22px] accent-green-600 disabled:cursor-not-allowed disabled:opacity-45"
+            type="checkbox" :disabled="!canCompleteSet(set)"
+          >
           <span class="sr-only">Mark set {{ setLabel(index) }} done</span>
         </label>
       </div>
