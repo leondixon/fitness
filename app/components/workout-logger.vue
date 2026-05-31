@@ -7,6 +7,8 @@ interface WorkoutLoggerSet {
 interface WorkoutLoggerExercise {
   id: string | number
   name: string
+  restSeconds?: number
+  workSetSeconds?: number
   sets: WorkoutLoggerSet[]
 }
 
@@ -14,7 +16,6 @@ interface WorkoutLoggerWorkout {
   title: string
   subtitle?: string
   date?: string
-  duration?: string
   focus?: string
   notes?: string
   exercises: WorkoutLoggerExercise[]
@@ -32,90 +33,135 @@ const props = withDefaults(
   },
 )
 
+function formatDuration(seconds: number) {
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+
+  const minutes = Math.ceil(seconds / 60)
+
+  if (minutes < 60) {
+    return `${minutes}m`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`
+}
+
+function displayDurationSeconds(seconds: number) {
+  if (seconds < 60) {
+    return seconds
+  }
+
+  return Math.ceil(seconds / 60) * 60
+}
+
+function exerciseDurationSeconds(exercise: WorkoutLoggerExercise) {
+  const workSetSeconds = exercise.workSetSeconds ?? 45
+  const restSeconds = exercise.restSeconds ?? 90
+  const setCount = exercise.sets.length
+  const restCount = Math.max(setCount - 1, 0)
+
+  return setCount * workSetSeconds + restCount * restSeconds
+}
+
+function estimatedExerciseDisplaySeconds(exercise: WorkoutLoggerExercise) {
+  return displayDurationSeconds(exerciseDurationSeconds(exercise))
+}
+
 const totalSets = computed(() => props.workout.exercises.reduce(
   (count, exercise) => count + exercise.sets.length,
   0,
 ))
+
+const estimatedWorkoutSeconds = computed(() => props.workout.exercises.reduce(
+  (seconds, exercise) => seconds + estimatedExerciseDisplaySeconds(exercise),
+  0,
+))
+
+const estimatedWorkoutTime = computed(() => formatDuration(estimatedWorkoutSeconds.value))
+
+function restTime(exercise: WorkoutLoggerExercise) {
+  return formatDuration(exercise.restSeconds ?? 90)
+}
+
+function workSetTime(exercise: WorkoutLoggerExercise) {
+  return formatDuration(exercise.workSetSeconds ?? 45)
+}
+
+function estimatedExerciseTime(exercise: WorkoutLoggerExercise) {
+  return formatDuration(estimatedExerciseDisplaySeconds(exercise))
+}
 </script>
 
 <template>
-  <section class="mx-auto grid w-full max-w-[860px] gap-5">
-    <header class="rounded-[24px] border border-slate-200 bg-slate-950 p-5 text-white shadow-[0_24px_70px_rgb(15_23_42_/_18%)] sm:p-7">
-      <p class="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-emerald-300">
-        Workout Logger
-      </p>
-
-      <div class="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div>
-          <h1 class="text-[clamp(2rem,5vw,3.25rem)] font-extrabold leading-none">
+  <section class="mx-auto grid w-full max-w-[860px] gap-3">
+    <header class="rounded-2xl border border-slate-200 bg-slate-950 p-3 text-white shadow-[0_10px_30px_rgb(15_23_42_/_12%)] sm:p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-300">
+            Workout
+          </p>
+          <h1 class="truncate text-2xl font-extrabold leading-tight">
             {{ workout.title }}
           </h1>
-          <p v-if="workout.subtitle" class="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-            {{ workout.subtitle }}
+          <p v-if="workout.focus" class="mt-1 truncate text-xs font-medium text-slate-300">
+            {{ workout.focus }}
           </p>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 text-center sm:min-w-[320px]">
-          <div class="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
-            <p class="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-400">
-              Exercises
-            </p>
-            <p class="mt-1 text-2xl font-black">
-              {{ workout.exercises.length }}
-            </p>
-          </div>
-          <div class="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
-            <p class="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-400">
-              Sets
-            </p>
-            <p class="mt-1 text-2xl font-black">
-              {{ totalSets }}
-            </p>
-          </div>
-          <div class="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
-            <p class="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-400">
-              Time
-            </p>
-            <p class="mt-1 text-2xl font-black">
-              {{ workout.duration ?? '—' }}
-            </p>
-          </div>
+        <div class="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-right ring-1 ring-white/10">
+          <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-400">
+            Est
+          </p>
+          <p class="text-lg font-black leading-none">
+            {{ estimatedWorkoutTime }}
+          </p>
         </div>
       </div>
 
-      <dl class="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
-        <div v-if="workout.date" class="rounded-2xl bg-slate-900 p-3">
-          <dt class="font-bold uppercase tracking-[0.08em] text-slate-500">
+      <div class="mt-3 grid grid-cols-3 gap-1.5 text-center">
+        <div class="rounded-xl bg-white/10 px-2 py-1.5 ring-1 ring-white/10">
+          <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-400">
+            Exercises
+          </p>
+          <p class="text-lg font-black leading-tight">
+            {{ workout.exercises.length }}
+          </p>
+        </div>
+        <div class="rounded-xl bg-white/10 px-2 py-1.5 ring-1 ring-white/10">
+          <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-400">
+            Sets
+          </p>
+          <p class="text-lg font-black leading-tight">
+            {{ totalSets }}
+          </p>
+        </div>
+        <div class="rounded-xl bg-white/10 px-2 py-1.5 ring-1 ring-white/10">
+          <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-400">
             Date
-          </dt>
-          <dd class="mt-1 text-white">
-            {{ workout.date }}
-          </dd>
+          </p>
+          <p class="truncate text-sm font-bold leading-tight">
+            {{ workout.date ?? '—' }}
+          </p>
         </div>
-        <div v-if="workout.focus" class="rounded-2xl bg-slate-900 p-3">
-          <dt class="font-bold uppercase tracking-[0.08em] text-slate-500">
-            Focus
-          </dt>
-          <dd class="mt-1 text-white">
-            {{ workout.focus }}
-          </dd>
-        </div>
-        <div v-if="workout.notes" class="rounded-2xl bg-slate-900 p-3 sm:col-span-1">
-          <dt class="font-bold uppercase tracking-[0.08em] text-slate-500">
-            Notes
-          </dt>
-          <dd class="mt-1 text-white">
-            {{ workout.notes }}
-          </dd>
-        </div>
-      </dl>
+      </div>
+
+      <p v-if="workout.notes" class="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">
+        {{ workout.notes }}
+      </p>
     </header>
 
-    <div class="grid gap-5">
+    <div class="grid gap-3">
       <exercise-logger
         v-for="exercise in workout.exercises"
         :key="exercise.id"
         :exercise-name="exercise.name"
+        :estimated-time="estimatedExerciseTime(exercise)"
+        :rest-time="restTime(exercise)"
+        :work-set-time="workSetTime(exercise)"
         :sets="exercise.sets"
       />
     </div>

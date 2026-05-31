@@ -16,10 +16,16 @@ interface LoggedSet {
 const props = withDefaults(
   defineProps<{
     exerciseName?: string
+    restTime?: string
+    workSetTime?: string
+    estimatedTime?: string
     sets?: ExerciseLoggerSet[]
   }>(),
   {
     exerciseName: 'Exercise',
+    restTime: undefined,
+    workSetTime: undefined,
+    estimatedTime: undefined,
     sets: () => [],
   },
 )
@@ -74,21 +80,28 @@ watch(
 
 <template>
   <section
-    class="w-full max-w-[760px] rounded-[20px] border border-gray-200 bg-white p-4 shadow-[0_18px_50px_rgb(15_23_42_/_8%)] sm:p-6"
+    class="w-full rounded-2xl border border-gray-200 bg-white p-3 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] sm:p-4"
     aria-labelledby="exercise-logger-title"
   >
-    <div class="mb-5">
-      <p class="mb-1 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">
+    <div class="mb-3">
+      <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-500">
         Exercise
       </p>
-      <h2 id="exercise-logger-title" class="text-[clamp(1.5rem,3vw,2rem)] text-slate-900">
+      <h2 id="exercise-logger-title" class="text-xl font-bold leading-tight text-slate-900">
         {{ exerciseName }}
       </h2>
+      <p v-if="restTime || workSetTime || estimatedTime" class="mt-1 text-xs font-semibold text-slate-500">
+        <span v-if="workSetTime">Work {{ workSetTime }}/set</span>
+        <span v-if="workSetTime && restTime"> · </span>
+        <span v-if="restTime">Rest {{ restTime }}</span>
+        <span v-if="(workSetTime || restTime) && estimatedTime"> · </span>
+        <span v-if="estimatedTime">Est {{ estimatedTime }}</span>
+      </p>
     </div>
 
-    <div class="grid gap-2" role="table" aria-label="Exercise sets">
+    <div class="grid gap-1.5" role="table" aria-label="Exercise sets">
       <div
-        class="grid grid-cols-[44px_minmax(88px,1fr)_minmax(64px,88px)_minmax(64px,88px)_48px] items-center gap-1.5 rounded-[14px] px-2 py-2.5 text-xs font-extrabold uppercase tracking-[0.06em] text-slate-500 sm:grid-cols-[56px_minmax(110px,1fr)_minmax(80px,110px)_minmax(80px,110px)_64px] sm:gap-2.5 sm:px-3"
+        class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 text-[0.65rem] font-extrabold uppercase tracking-[0.05em] text-slate-500 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
         role="row"
       >
         <span role="columnheader">Set</span>
@@ -100,30 +113,30 @@ watch(
 
       <div
         v-for="(set, index) in loggedSets" :key="set.index"
-        class="grid grid-cols-[44px_minmax(88px,1fr)_minmax(64px,88px)_minmax(64px,88px)_48px] items-center gap-1.5 rounded-[14px] px-2 py-2.5 sm:grid-cols-[56px_minmax(110px,1fr)_minmax(80px,110px)_minmax(80px,110px)_64px] sm:gap-2.5 sm:px-3"
+        class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
         :class="set.done ? 'bg-emerald-50' : 'bg-slate-50'" role="row"
       >
-        <strong role="cell">{{ setLabel(index) }}</strong>
-        <span class="font-semibold text-slate-600" role="cell">{{ set.previous }}</span>
+        <strong class="text-sm" role="cell">{{ setLabel(index) }}</strong>
+        <span class="truncate text-xs font-semibold text-slate-600" role="cell">{{ set.previous }}</span>
         <label role="cell">
           <span class="sr-only">Weight in kg for set {{ setLabel(index) }}</span>
           <input
             v-model="set.kg"
-            class="box-border w-full rounded-[10px] border border-slate-300 bg-white p-2.5 font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
-            type="number" min="0" step="0.5" inputmode="decimal" placeholder="0"
+            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+            type="text" inputmode="decimal" placeholder="0"
           >
         </label>
         <label role="cell">
           <span class="sr-only">Reps for set {{ setLabel(index) }}</span>
           <input
             v-model="set.reps"
-            class="box-border w-full rounded-[10px] border border-slate-300 bg-white p-2.5 font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
-            type="number" min="0" step="1" inputmode="numeric" placeholder="0"
+            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+            type="text" inputmode="numeric" placeholder="0"
           >
         </label>
         <label class="grid place-items-center" role="cell">
           <input
-            v-model="set.done" class="size-[22px] accent-green-600 disabled:cursor-not-allowed disabled:opacity-45"
+            v-model="set.done" class="size-5 accent-green-600 disabled:cursor-not-allowed disabled:opacity-45"
             type="checkbox" :disabled="!canCompleteSet(set)"
           >
           <span class="sr-only">Mark set {{ setLabel(index) }} done</span>
