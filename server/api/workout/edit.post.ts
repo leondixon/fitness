@@ -1,14 +1,23 @@
-export default defineEventHandler(async (event) => {
-  const body = await readBody<{
-    workout?: unknown
-    feedback?: string
-  }>(event)
+interface WorkoutEditRequest {
+  workout?: unknown
+  feedback?: string
+}
 
-  // TODO: Send `body.workout` and `body.feedback` to the LLM, then return the edited workout.
-  // This empty placeholder keeps the API contract ready without wiring an LLM provider yet.
+async function requestWorkoutEditFromLlm(_request: WorkoutEditRequest) {
+  // TODO: Wire this up to an LLM provider and return the edited workout.
+  return null
+}
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody<WorkoutEditRequest>(event)
+  const editedWorkout = await requestWorkoutEditFromLlm({
+    workout: body.workout,
+    feedback: body.feedback,
+  })
+
   return {
     workout: body.workout,
     feedback: body.feedback,
-    editedWorkout: null,
+    editedWorkout,
   }
 })

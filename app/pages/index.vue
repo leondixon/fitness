@@ -402,13 +402,15 @@ const selectedWorkout = ref<(typeof upcomingWorkouts)[number]>()
 const workoutEditFeedback = ref('')
 const workoutEditPending = ref(false)
 const workoutEditMessage = ref('')
+const workoutEditWorkoutId = ref(upcomingWorkouts[0]?.id)
 
-const currentWorkout = computed(() => upcomingWorkouts[0])
+const currentWorkout = computed(() => upcomingWorkouts.find(workout => workout.id === workoutEditWorkoutId.value))
 
 async function submitWorkoutEditFeedback() {
   const feedback = workoutEditFeedback.value.trim()
+  const workout = currentWorkout.value
 
-  if (!feedback || workoutEditPending.value) {
+  if (!feedback || !workout || workoutEditPending.value) {
     return
   }
 
@@ -419,7 +421,7 @@ async function submitWorkoutEditFeedback() {
     await $fetch('/api/workout/edit', {
       method: 'POST',
       body: {
-        workout: currentWorkout.value,
+        workout,
         feedback,
       },
     })
@@ -445,14 +447,26 @@ async function submitWorkoutEditFeedback() {
             Edit workout
           </p>
           <h2 class="text-xl font-extrabold leading-tight text-slate-900">
-            Ask for changes to {{ currentWorkout.title }}
+            Ask for changes to {{ currentWorkout?.title ?? 'your workout' }}
           </h2>
           <p class="mt-1 text-sm leading-5 text-slate-500">
-            Describe what you want changed. The current workout and your feedback will be sent to the edit API.
+            Choose a workout, describe what you want changed, and the API will receive both the workout and your feedback.
           </p>
         </div>
 
         <form class="grid gap-3" @submit.prevent="submitWorkoutEditFeedback">
+          <label class="grid gap-1.5">
+            <span class="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Workout</span>
+            <select
+              v-model="workoutEditWorkoutId"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+            >
+              <option v-for="workout in upcomingWorkouts" :key="workout.id" :value="workout.id">
+                {{ workout.title }} — {{ workout.date }}
+              </option>
+            </select>
+          </label>
+
           <label class="grid gap-1.5">
             <span class="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Feedback</span>
             <textarea
@@ -466,7 +480,7 @@ async function submitWorkoutEditFeedback() {
             <button
               class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300"
               type="submit"
-              :disabled="!workoutEditFeedback.trim() || workoutEditPending"
+              :disabled="!workoutEditFeedback.trim() || !currentWorkout || workoutEditPending"
             >
               {{ workoutEditPending ? 'Sending…' : 'Send edit request' }}
             </button>
