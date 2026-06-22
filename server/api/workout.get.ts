@@ -2,7 +2,7 @@ import { workoutSchema } from '~~/server/schema/workout'
 
 export default defineEventHandler(() => {
   return workoutSchema.parse({
-    name: 'Push Day',
+    title: 'Push Day',
     exercises: [
       {
         name: 'Bench Press',
