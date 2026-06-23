@@ -1,13 +1,17 @@
+import { z } from 'zod'
+
 import { workoutSchema } from '~~/server/schema/workout'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
 
-interface WorkoutEditRequest {
-  workout?: unknown
+const workoutPlanSchema = z.array(workoutSchema).min(1)
+
+interface WorkoutPlanEditRequest {
+  workouts?: unknown
   feedback?: string
 }
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<WorkoutEditRequest>(event)
+  const body = await readBody<WorkoutPlanEditRequest>(event)
   const feedback = body.feedback?.trim()
 
   if (!feedback) {
@@ -17,7 +21,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const workout = workoutSchema.parse(body.workout)
+  const workouts = workoutPlanSchema.parse(body.workouts)
   const config = useRuntimeConfig()
   const deepseek = getDeepSeekClient()
 
@@ -28,16 +32,17 @@ export default defineEventHandler(async (event) => {
       {
         role: 'system',
         content: [
-          'You edit workout plans as a practical strength and conditioning coach.',
-          'Return only valid JSON with one top-level key named workout.',
-          'Preserve the workout shape: id, title, subtitle, date, focus, notes, exercises[].',
-          'Preserve exercise ids when possible. Every exercise must include name and sets.',
+          'You edit full workout plans as a practical strength and conditioning coach.',
+          'Return only valid JSON with one top-level key named workouts.',
+          'The workouts value must be an array of workout objects.',
+          'Preserve workout and exercise ids when possible.',
+          'Every workout must include title and exercises. Every exercise must include name and sets.',
           'Apply the requested change safely and keep the plan realistic.',
         ].join(' '),
       },
       {
         role: 'user',
-        content: JSON.stringify({ workout, requestedChange: feedback }),
+        content: JSON.stringify({ workouts, requestedChange: feedback }),
       },
     ],
   })
@@ -52,11 +57,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const parsed = JSON.parse(content)
-  const editedWorkout = workoutSchema.parse(parsed.workout)
+  const editedWorkouts = workoutPlanSchema.parse(parsed.workouts)
 
   return {
-    workout,
+    workouts,
     feedback,
-    editedWorkout,
+    editedWorkouts,
   }
 })
