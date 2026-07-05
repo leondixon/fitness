@@ -12,15 +12,7 @@ export default defineEventHandler(async (event) => {
     messages: [
       {
         role: 'system',
-        content: [
-          'You generate useful workout plans as a practical strength and conditioning coach.',
-          'Return only valid JSON with exactly these top-level keys: title, summary, workouts.',
-          'Do not include plan metadata such as id, goal, createdAt, updatedAt, version, or changeLog.',
-          'The workouts value must be a non-empty array of workout objects.',
-          'Every workout must include title and a non-empty exercises array. Optional workout keys may include id, subtitle, date, focus, and notes.',
-          'Every exercise must include name and sets. Optional exercise keys may include id, restSeconds, and workSetSeconds.',
-          'Use realistic exercises, set prescriptions, rest times, and progression notes tailored to the user goal.',
-        ].join(' '),
+        content: 'You generate useful workout plans as a practical strength and conditioning coach. Return only valid JSON with exactly these top-level keys: title, summary, workouts. Do not include plan metadata such as id, goal, createdAt, updatedAt, version, or changeLog. The workouts value must be a non-empty array of workout objects. Every workout must include title and a non-empty exercises array. Optional workout keys may include id, subtitle, date, focus, and notes. Every exercise must include name and sets. Optional exercise keys may include id, restSeconds, and workSetSeconds. Use realistic exercises, set prescriptions, rest times, and progression notes tailored to the user goal.',
       },
       {
         role: 'user',
