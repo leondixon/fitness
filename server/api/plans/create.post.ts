@@ -13,20 +13,10 @@ export default defineEventHandler(async (event) => {
 
 async function createPlanFromDeepSeek(input: CreatePlanRequest): Promise<WorkoutPlan> {
   void input
-  throw createError({
-    statusCode: 501,
-    statusMessage: 'DeepSeek plan generation is not scaffolded yet.',
-  })
-}
-
-export async function requestCreatePlanLlmResponse(input: CreatePlanRequest): Promise<CreatePlanLlmResponse> {
-  void input
   void getDeepSeekClient
-  void createPlanSystemPrompt
-  void createPlanUserPrompt
   throw createError({
     statusCode: 501,
-    statusMessage: 'DeepSeek create-plan request is not implemented yet.',
+    statusMessage: 'DeepSeek plan generation is not implemented yet.',
   })
 }
 
@@ -55,20 +45,5 @@ export function normalizeGeneratedWorkouts(workouts: CreatePlanLlmResponse['work
   throw createError({
     statusCode: 501,
     statusMessage: 'Generated workout normalization is not implemented yet.',
-  })
-}
-
-export function createPlanSystemPrompt(): string {
-  throw createError({
-    statusCode: 501,
-    statusMessage: 'Create-plan system prompt is not implemented yet.',
-  })
-}
-
-export function createPlanUserPrompt(input: CreatePlanRequest): string {
-  void input
-  throw createError({
-    statusCode: 501,
-    statusMessage: 'Create-plan user prompt is not implemented yet.',
   })
 }
