@@ -6,9 +6,8 @@ export default defineEventHandler(async (event) => {
 
   void input
   void getDeepSeekClient
-  void createPlanResponseSchema
-  throw createError({
-    statusCode: 501,
-    statusMessage: 'DeepSeek plan generation is not implemented yet.',
-  })
+
+  const generatedPlan = undefined as unknown
+
+  return createPlanResponseSchema.parse(generatedPlan)
 })
