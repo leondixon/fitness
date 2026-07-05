@@ -16,4 +16,3 @@ export const createPlanResponseSchema = workoutPlanSchema
 
 export type CreatePlanRequest = z.infer<typeof createPlanRequestSchema>
 export type CreatePlanLlmResponse = z.infer<typeof createPlanLlmResponseSchema>
-export type CreatePlanResponse = z.infer<typeof createPlanResponseSchema>
