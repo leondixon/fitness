@@ -1,10 +1,9 @@
 # Conventions
 
-## Schemas & types
-
 - Zod-first: define data shapes as zod schemas, then derive types with `z.infer`. Do not hand-write parallel `type`/`interface` declarations for data that crosses the API boundary.
 - Validate at boundaries: parse API inputs and outputs against their schema (`schema.parse(...)`).
 - Schemas live in a dedicated `schema/` folder (e.g. `server/schema/`). They are not utils — keep them out of `utils/`.
+- inline code if the function would only be called once.
 
 ## Structure
 
