@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     }
   ]
 }
-Do not include plan metadata such as id, goal, createdAt, updatedAt, version, or changeLog. The workouts array must be non-empty. Every workout must include title and a non-empty exercises array. Every exercise must include name and a non-empty sets array. Use realistic exercises, set prescriptions, rest times, and progression notes tailored to the user goal.`, 
+Do not include plan metadata such as id, goal, createdAt, updatedAt, version, or changeLog. The workouts array must be non-empty. Every workout must include title and a non-empty exercises array. Every exercise must include name and a non-empty sets array. Use realistic exercises, set prescriptions, rest times, and progression notes tailored to the user goal.`,
       },
       {
         role: 'user',
