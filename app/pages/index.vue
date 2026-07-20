@@ -3,8 +3,8 @@ await navigateTo('/workouts', { replace: true })
 </script>
 
 <template>
-  <main class="grid min-h-screen place-items-center bg-slate-100 p-4">
-    <NuxtLink class="text-sm font-bold text-emerald-700 hover:text-emerald-800" to="/workouts">
+  <main class="grid min-h-screen place-items-center bg-slate-100 p-4 dark:bg-slate-950">
+    <NuxtLink class="text-sm font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300" to="/workouts">
       Go to upcoming workouts
     </NuxtLink>
   </main>

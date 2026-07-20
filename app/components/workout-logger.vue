@@ -98,7 +98,7 @@ function estimatedExerciseTime(exercise: WorkoutLoggerExercise) {
 
 <template>
   <section class="mx-auto grid w-full max-w-[860px] gap-3">
-    <header class="rounded-2xl border border-slate-200 bg-slate-950 p-3 text-white shadow-[0_10px_30px_rgb(15_23_42_/_12%)] sm:p-4">
+    <header class="rounded-2xl border border-slate-200 bg-slate-950 p-3 text-white shadow-[0_10px_30px_rgb(15_23_42_/_12%)] dark:border-slate-800 sm:p-4">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-300">

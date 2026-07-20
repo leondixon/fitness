@@ -80,17 +80,17 @@ watch(
 
 <template>
   <section
-    class="w-full rounded-2xl border border-gray-200 bg-white p-3 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] sm:p-4"
+    class="w-full rounded-2xl border border-gray-200 bg-white p-3 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] dark:border-slate-800 dark:bg-slate-900 sm:p-4"
     aria-labelledby="exercise-logger-title"
   >
     <div class="mb-3">
-      <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-500">
+      <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
         Exercise
       </p>
-      <h2 id="exercise-logger-title" class="text-xl font-bold leading-tight text-slate-900">
+      <h2 id="exercise-logger-title" class="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">
         {{ exerciseName }}
       </h2>
-      <p v-if="restTime || workSetTime || estimatedTime" class="mt-1 text-xs font-semibold text-slate-500">
+      <p v-if="restTime || workSetTime || estimatedTime" class="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
         <span v-if="workSetTime">Work {{ workSetTime }}/set</span>
         <span v-if="workSetTime && restTime"> · </span>
         <span v-if="restTime">Rest {{ restTime }}</span>
@@ -101,7 +101,7 @@ watch(
 
     <div class="grid gap-1.5" role="table" aria-label="Exercise sets">
       <div
-        class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 text-[0.65rem] font-extrabold uppercase tracking-[0.05em] text-slate-500 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
+        class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 text-[0.65rem] font-extrabold uppercase tracking-[0.05em] text-slate-500 dark:text-slate-400 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
         role="row"
       >
         <span role="columnheader">Set</span>
@@ -114,15 +114,15 @@ watch(
       <div
         v-for="(set, index) in loggedSets" :key="set.index"
         class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
-        :class="set.done ? 'bg-emerald-50' : 'bg-slate-50'" role="row"
+        :class="set.done ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-slate-50 dark:bg-slate-800'" role="row"
       >
-        <strong class="text-sm" role="cell">{{ setLabel(index) }}</strong>
-        <span class="truncate text-xs font-semibold text-slate-600" role="cell">{{ set.previous }}</span>
+        <strong class="text-sm text-slate-900 dark:text-slate-100" role="cell">{{ setLabel(index) }}</strong>
+        <span class="truncate text-xs font-semibold text-slate-600 dark:text-slate-400" role="cell">{{ set.previous }}</span>
         <label role="cell">
           <span class="sr-only">Weight in kg for set {{ setLabel(index) }}</span>
           <input
             v-model="set.kg"
-            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             type="text" inputmode="decimal" placeholder="0"
           >
         </label>
@@ -130,7 +130,7 @@ watch(
           <span class="sr-only">Reps for set {{ setLabel(index) }}</span>
           <input
             v-model="set.reps"
-            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             type="text" inputmode="numeric" placeholder="0"
           >
         </label>

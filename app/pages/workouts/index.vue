@@ -50,11 +50,11 @@ function openWorkout(workout: WorkoutPlanWorkout) {
 </script>
 
 <template>
-  <main class="app-shell">
+  <main class="min-h-screen bg-slate-100 p-3 dark:bg-slate-950">
     <div class="mx-auto grid w-full max-w-[860px] gap-3">
       <div class="flex justify-end">
         <button
-          class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-400 dark:hover:border-emerald-700 dark:hover:bg-emerald-500/10"
           type="button"
           @click="showPlanFeedback = !showPlanFeedback"
         >
@@ -62,38 +62,38 @@ function openWorkout(workout: WorkoutPlanWorkout) {
         </button>
       </div>
 
-      <section v-if="showPlanFeedback" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] sm:p-5">
+      <section v-if="showPlanFeedback" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] dark:border-slate-800 dark:bg-slate-900 sm:p-5">
         <div class="mb-3">
-          <p class="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-700">
+          <p class="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-700 dark:text-emerald-400">
             Edit plan
           </p>
-          <h2 class="text-xl font-extrabold leading-tight text-slate-900">
+          <h2 class="text-xl font-extrabold leading-tight text-slate-900 dark:text-slate-100">
             Ask for changes to the full workout plan
           </h2>
-          <p class="mt-1 text-sm leading-5 text-slate-500">
+          <p class="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
             Describe changes across the whole plan, like changing the weekly split, adding recovery, or shifting the focus.
           </p>
         </div>
 
         <form class="grid gap-3" @submit.prevent="submitPlanEditFeedback">
           <label class="grid gap-1.5">
-            <span class="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Plan feedback</span>
+            <span class="text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Plan feedback</span>
             <textarea
               v-model="planEditFeedback"
-              class="min-h-28 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+              class="min-h-28 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800 dark:focus:ring-emerald-500/20"
               placeholder="Example: Make this a 3-day plan with more mobility and less knee-dominant work."
             />
           </label>
 
           <div class="flex flex-wrap items-center gap-3">
             <button
-              class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+              class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
               type="submit"
               :disabled="!planEditFeedback.trim() || planEditPending"
             >
               {{ planEditPending ? 'Sending…' : 'Update plan' }}
             </button>
-            <p v-if="planEditMessage" class="text-sm font-semibold text-slate-500">
+            <p v-if="planEditMessage" class="text-sm font-semibold text-slate-500 dark:text-slate-400">
               {{ planEditMessage }}
             </p>
           </div>
@@ -107,20 +107,3 @@ function openWorkout(workout: WorkoutPlanWorkout) {
     </div>
   </main>
 </template>
-
-<style scoped>
-.app-shell {
-  min-height: 100vh;
-  box-sizing: border-box;
-  padding: 12px;
-  background: #f1f5f9;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-}
-</style>
