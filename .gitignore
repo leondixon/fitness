@@ -17,6 +17,10 @@ logs
 .DS_Store
 .fleet
 .idea
+PLAN.md
+prompt.md
+pnpm-lock.yaml
+supabase/.temp/
 
 # Local env files
 .env

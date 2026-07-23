@@ -1,24 +1,31 @@
-import { updatePlanRequestSchema, updatePlanResponseSchema } from '../../schema/updatePlan'
+import { mapWorkoutPlanRow } from '~~/server/schema/persistedPlan'
+import { updatePlanRequestSchema, updatePlanResponseSchema } from '~~/server/schema/updatePlan'
+import { getOwnedPlan } from '~~/server/utils/plans'
+import { getSupabaseServerClient, requireUser } from '~~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
+  if (!id)
+    throw createError({ statusCode: 400, statusMessage: 'Plan id is required.' })
+
+  const user = await requireUser(event)
   const input = updatePlanRequestSchema.parse(await readBody(event))
-
-  if (!id || id !== input.plan.id) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Route plan id must match request plan id',
+  const plan = await getOwnedPlan(event, user.id, id)
+  const version = plan.version + 1
+  const { data, error } = await getSupabaseServerClient(event)
+    .from('workout_plans')
+    .update({
+      summary: `${plan.summary}\n\nUpdate ${version}: ${input.adjustment}`,
+      change_log: [...plan.changeLog, input.adjustment],
+      version,
+      updated_at: new Date().toISOString(),
     })
-  }
+    .eq('id', plan.id)
+    .eq('user_id', user.id)
+    .select('id,user_id,goal,title,summary,workouts,change_log,version,created_at,updated_at')
+    .single()
 
-  const nextVersion = input.plan.version + 1
-  const updatedPlan = {
-    ...input.plan,
-    updatedAt: new Date().toISOString(),
-    version: nextVersion,
-    summary: `${input.plan.summary}\n\nUpdate ${nextVersion}: ${input.adjustment}`,
-    changeLog: [...input.plan.changeLog, input.adjustment],
-  }
-
-  return updatePlanResponseSchema.parse(updatedPlan)
+  if (error || !data)
+    throw createError({ statusCode: 500, statusMessage: 'Could not update the workout plan.' })
+  return updatePlanResponseSchema.parse(mapWorkoutPlanRow(data))
 })

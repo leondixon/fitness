@@ -1,5 +1,6 @@
 import { workoutSchema } from '~~/server/schema/workout'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
+import { requireUser } from '~~/server/utils/supabase'
 
 interface WorkoutEditRequest {
   workout?: unknown
@@ -7,6 +8,7 @@ interface WorkoutEditRequest {
 }
 
 export default defineEventHandler(async (event) => {
+  await requireUser(event)
   const body = await readBody<WorkoutEditRequest>(event)
   const feedback = body.feedback?.trim()
 

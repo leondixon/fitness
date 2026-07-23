@@ -1,109 +1,50 @@
 <script setup lang="ts">
-import type { WorkoutPlanWorkout } from '~/composables/useWorkoutPlan'
+import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
 
-const upcomingWorkouts = useWorkoutPlan()
-const showPlanFeedback = ref(false)
-const planEditFeedback = ref('')
-const planEditPending = ref(false)
-const planEditMessage = ref('')
+definePageMeta({ middleware: 'require-plan' })
 
-function errorMessage(error: unknown, fallback: string) {
-  return error && typeof error === 'object' && 'statusMessage' in error
-    ? String(error.statusMessage)
-    : fallback
+const { data, error } = await useFetch('/api/plans/current')
+const plan = computed(() => data.value?.plan as WorkoutPlan | null | undefined)
+const endingPlan = ref(false)
+const endPlanError = ref('')
+
+function openWorkout(workout: WorkoutPlan['workouts'][number]) {
+  return navigateTo(`/workouts/${workout.id}`)
 }
 
-async function submitPlanEditFeedback() {
-  const feedback = planEditFeedback.value.trim()
-
-  if (!feedback || planEditPending.value) {
+async function endPlan() {
+  if (!plan.value || endingPlan.value)
     return
-  }
 
-  planEditPending.value = true
-  planEditMessage.value = ''
+  endingPlan.value = true
+  endPlanError.value = ''
 
   try {
-    const response = await $fetch<{ editedWorkouts: WorkoutPlanWorkout[] }>('/api/workout/plan/edit', {
-      method: 'POST',
-      body: {
-        workouts: upcomingWorkouts.value,
-        feedback,
-      },
-    })
-
-    upcomingWorkouts.value.splice(0, upcomingWorkouts.value.length, ...response.editedWorkouts)
-    planEditFeedback.value = ''
-    planEditMessage.value = 'Plan updated with DeepSeek.'
+    await $fetch(`/api/plans/${plan.value.id}`, { method: 'DELETE' })
+    await navigateTo('/')
   }
-  catch (error) {
-    planEditMessage.value = errorMessage(error, 'Could not update plan. Please try again.')
+  catch (requestError) {
+    endPlanError.value = requestError instanceof Error ? requestError.message : 'Could not end your workout plan.'
   }
   finally {
-    planEditPending.value = false
+    endingPlan.value = false
   }
-}
-
-function openWorkout(workout: WorkoutPlanWorkout) {
-  return navigateTo(`/workouts/${workout.id}`)
 }
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-100 p-3 dark:bg-slate-950">
+  <main class="min-h-screen bg-slate-100 p-3">
     <div class="mx-auto grid w-full max-w-[860px] gap-3">
-      <div class="flex justify-end">
-        <button
-          class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-400 dark:hover:border-emerald-700 dark:hover:bg-emerald-500/10"
-          type="button"
-          @click="showPlanFeedback = !showPlanFeedback"
-        >
-          {{ showPlanFeedback ? 'Hide plan feedback' : 'Give plan feedback' }}
-        </button>
-      </div>
-
-      <section v-if="showPlanFeedback" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-        <div class="mb-3">
-          <p class="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-700 dark:text-emerald-400">
-            Edit plan
-          </p>
-          <h2 class="text-xl font-extrabold leading-tight text-slate-900 dark:text-slate-100">
-            Ask for changes to the full workout plan
-          </h2>
-          <p class="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
-            Describe changes across the whole plan, like changing the weekly split, adding recovery, or shifting the focus.
-          </p>
-        </div>
-
-        <form class="grid gap-3" @submit.prevent="submitPlanEditFeedback">
-          <label class="grid gap-1.5">
-            <span class="text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Plan feedback</span>
-            <textarea
-              v-model="planEditFeedback"
-              class="min-h-28 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800 dark:focus:ring-emerald-500/20"
-              placeholder="Example: Make this a 3-day plan with more mobility and less knee-dominant work."
-            />
-          </label>
-
-          <div class="flex flex-wrap items-center gap-3">
-            <button
-              class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
-              type="submit"
-              :disabled="!planEditFeedback.trim() || planEditPending"
-            >
-              {{ planEditPending ? 'Sending…' : 'Update plan' }}
-            </button>
-            <p v-if="planEditMessage" class="text-sm font-semibold text-slate-500 dark:text-slate-400">
-              {{ planEditMessage }}
-            </p>
-          </div>
-        </form>
-      </section>
-
-      <workout-plan
-        :workouts="upcomingWorkouts"
-        @select="openWorkout"
-      />
+      <p v-if="error" class="rounded-2xl bg-white p-4 text-sm font-semibold text-red-700">
+        Could not load your workout plan.
+      </p>
+      <p v-else-if="endPlanError" class="rounded-2xl bg-white p-4 text-sm font-semibold text-red-700">
+        {{ endPlanError }}
+      </p>
+      <workout-plan v-if="plan" :ending-plan="endingPlan" :workouts="plan.workouts" @end-plan="endPlan" @select="openWorkout" />
+      <p v-else class="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
+        There isn't a current workout plan yet.
+      </p>
     </div>
   </main>
 </template>

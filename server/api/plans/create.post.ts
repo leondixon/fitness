@@ -1,12 +1,20 @@
 import { createPlanLlmResponseSchema, createPlanRequestSchema, createPlanResponseSchema } from '~~/server/schema/createPlan'
+import { mapWorkoutPlanRow, persistedPlanInsertSchema } from '~~/server/schema/persistedPlan'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
+import { getCurrentPlan } from '~~/server/utils/plans'
+import { getSupabaseServerClient, requireUser } from '~~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireUser(event)
   const input = createPlanRequestSchema.parse(await readBody(event))
-  const config = useRuntimeConfig()
-  const deepseek = getDeepSeekClient()
+  const existingPlan = await getCurrentPlan(event, user.id)
 
-  const completion = await deepseek.chat.completions.create({
+  if (existingPlan) {
+    return createPlanResponseSchema.parse(existingPlan)
+  }
+
+  const config = useRuntimeConfig()
+  const completion = await getDeepSeekClient().chat.completions.create({
     model: config.deepseekModel || 'deepseek-v4-flash',
     response_format: { type: 'json_object' },
     messages: [
@@ -14,72 +22,42 @@ export default defineEventHandler(async (event) => {
         role: 'system',
         content: `You generate useful workout plans as a practical strength and conditioning coach. Return only valid JSON matching this exact shape, with no markdown or extra text:
 {
-  "title": "string",
-  "summary": "string",
-  "workouts": [
-    {
-      "title": "string",
-      "subtitle": "string",
-      "date": "string",
-      "focus": "string",
-      "notes": "string",
-      "exercises": [
-        {
-          "name": "string",
-          "restSeconds": 120,
-          "workSetSeconds": 45,
-          "sets": [
-            {
-              "reps": "8-10",
-              "weight": "moderate",
-              "previous": "optional string",
-              "warmup": false
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  "title": "string", "summary": "string", "workouts": [{ "title": "string", "subtitle": "string", "date": "string", "focus": "string", "notes": "string", "exercises": [{ "name": "string", "restSeconds": 120, "workSetSeconds": 45, "sets": [{ "reps": "8-10", "weight": "moderate", "previous": "optional string", "warmup": false }] }] }]
 }
-Do not include plan metadata such as id, goal, createdAt, updatedAt, version, or changeLog. The workouts array must be non-empty. Every workout must include title and a non-empty exercises array. Every exercise must include name and a non-empty sets array. Use realistic exercises, set prescriptions, rest times, and progression notes tailored to the user goal.`,
+Do not include plan metadata. The workouts array, each workout's exercises array, and each exercise's sets array must be non-empty.`,
       },
-      {
-        role: 'user',
-        content: JSON.stringify({ goal: input.goal }),
-      },
+      { role: 'user', content: JSON.stringify({ goal: input.goal }) },
     ],
   })
-
   const content = completion.choices[0]?.message.content
 
   if (!content) {
-    throw createError({
-      statusCode: 502,
-      statusMessage: 'LLM returned an empty response.',
-    })
+    throw createError({ statusCode: 502, statusMessage: 'LLM returned an empty response.' })
   }
 
-  const parsedPlan = createPlanLlmResponseSchema.safeParse(JSON.parse(content))
-  if (!parsedPlan.success) {
-    console.error(parsedPlan.error)
-    throw createError({
-      statusCode: 502,
-      statusMessage: 'LLM returned an invalid plan response.',
-    })
+  let llmResponse: unknown
+  try {
+    llmResponse = JSON.parse(content)
+  }
+  catch {
+    throw createError({ statusCode: 502, statusMessage: 'LLM returned an invalid plan response.' })
   }
 
-  const plan = parsedPlan.data
-  const now = new Date().toISOString()
+  const generated = createPlanLlmResponseSchema.safeParse(llmResponse)
+  if (!generated.success) {
+    console.error(generated.error)
+    throw createError({ statusCode: 502, statusMessage: 'LLM returned an invalid plan response.' })
+  }
+
   const planId = crypto.randomUUID()
-  const generatedPlan = {
+  const insert = persistedPlanInsertSchema.parse({
     id: planId,
+    user_id: user.id,
     goal: input.goal,
-    title: plan.title,
-    summary: plan.summary,
-    createdAt: now,
-    updatedAt: now,
+    title: generated.data.title,
+    summary: generated.data.summary,
     version: 1,
-    workouts: plan.workouts.map((workout, workoutIndex) => ({
+    workouts: generated.data.workouts.map((workout, workoutIndex) => ({
       ...workout,
       id: workout.id ?? `${planId}-workout-${workoutIndex + 1}`,
       exercises: workout.exercises.map((exercise, exerciseIndex) => ({
@@ -87,8 +65,23 @@ Do not include plan metadata such as id, goal, createdAt, updatedAt, version, or
         id: exercise.id ?? `${planId}-workout-${workoutIndex + 1}-exercise-${exerciseIndex + 1}`,
       })),
     })),
-    changeLog: [`Created plan for goal: ${input.goal}`],
+    change_log: [`Created plan for goal: ${input.goal}`],
+  })
+  const { data, error } = await getSupabaseServerClient(event)
+    .from('workout_plans')
+    .insert(insert)
+    .select('id,user_id,goal,title,summary,workouts,change_log,version,created_at,updated_at')
+    .single()
+
+  if (error?.code === '23505') {
+    const currentPlan = await getCurrentPlan(event, user.id)
+    if (currentPlan)
+      return createPlanResponseSchema.parse(currentPlan)
   }
 
-  return createPlanResponseSchema.parse(generatedPlan)
+  if (error || !data) {
+    throw createError({ statusCode: 500, statusMessage: 'Could not save the workout plan.' })
+  }
+
+  return createPlanResponseSchema.parse(mapWorkoutPlanRow(data))
 })

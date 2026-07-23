@@ -20,15 +20,20 @@ interface WorkoutPlanWorkout {
 withDefaults(
   defineProps<{
     workouts?: WorkoutPlanWorkout[]
+    endingPlan?: boolean
   }>(),
   {
     workouts: () => [],
+    endingPlan: false,
   },
 )
 
 const emit = defineEmits<{
+  endPlan: []
   select: [workout: WorkoutPlanWorkout]
 }>()
+
+const confirmingEndPlan = ref(false)
 
 function formatDuration(seconds: number) {
   if (seconds < 60) {
@@ -84,9 +89,37 @@ function totalSets(workout: WorkoutPlanWorkout) {
       <p class="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-300">
         Plan
       </p>
-      <h1 class="text-2xl font-extrabold leading-tight">
-        Upcoming workouts
-      </h1>
+      <div class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-extrabold leading-tight">
+          Upcoming workouts
+        </h1>
+        <div v-if="confirmingEndPlan" class="flex shrink-0 items-center gap-2">
+          <button
+            class="rounded-xl px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white"
+            :disabled="endingPlan"
+            type="button"
+            @click="confirmingEndPlan = false"
+          >
+            Cancel
+          </button>
+          <button
+            class="rounded-xl border border-red-400/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:border-red-300 hover:bg-red-900/60 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="endingPlan"
+            type="button"
+            @click="emit('endPlan')"
+          >
+            {{ endingPlan ? 'Ending…' : 'Yes, end plan' }}
+          </button>
+        </div>
+        <button
+          v-else
+          class="shrink-0 rounded-xl border border-red-400/60 px-3 py-2 text-xs font-bold text-red-200 transition hover:border-red-300 hover:bg-red-950/50 hover:text-red-100"
+          type="button"
+          @click="confirmingEndPlan = true"
+        >
+          End plan
+        </button>
+      </div>
       <p class="mt-1 text-sm leading-5 text-slate-300">
         Pick a session to open the workout logger.
       </p>

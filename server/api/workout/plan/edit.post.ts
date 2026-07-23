@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { workoutSchema } from '~~/server/schema/workout'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
+import { requireUser } from '~~/server/utils/supabase'
 
 const workoutPlanSchema = z.array(workoutSchema).min(1)
 
@@ -11,6 +12,7 @@ interface WorkoutPlanEditRequest {
 }
 
 export default defineEventHandler(async (event) => {
+  await requireUser(event)
   const body = await readBody<WorkoutPlanEditRequest>(event)
   const feedback = body.feedback?.trim()
 
