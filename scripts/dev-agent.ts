@@ -1,4 +1,5 @@
 import { createWriteStream, mkdirSync } from 'node:fs'
+import process from 'node:process'
 import { finished } from 'node:stream/promises'
 
 const runId = `${new Date().toISOString().replaceAll(':', '-')}-${process.pid}`
