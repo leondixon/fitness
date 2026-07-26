@@ -9,63 +9,40 @@ beforeAll(() => {
     Object.assign(new Error(options.statusMessage), options))
 })
 
+const workout = {
+  title: 'Workout',
+  exercises: [{ name: 'Squat', sets: [{ reps: '5', weight: '60' }] }],
+}
 const validPlan = {
-  title: 'Strength plan',
-  summary: 'A balanced strength plan.',
-  workouts: Array.from({ length: 12 }, (_, index) => ({
-    restDaysAfterPrevious: index === 0 ? 0 : 6,
-    title: `Workout ${index + 1}`,
-    exercises: [{
-      name: 'Squat',
-      sets: [{ reps: '5', weight: 'heavy' }],
-    }],
-  })),
+  title: 'Strength routine',
+  summary: 'A repeating strength routine.',
+  workouts: [workout, workout, workout],
 }
 
 function mockClient(responses: unknown[]) {
   const requests: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming[] = []
-
   return {
     requests,
     client: {
-      chat: {
-        completions: {
-          create: async (request) => {
-            requests.push(request)
-            return {
-              choices: [{
-                message: { content: JSON.stringify(responses.shift()) },
-              }],
-            }
-          },
-        },
-      },
+      chat: { completions: { create: async (request) => {
+        requests.push(request)
+        return { choices: [{ message: { content: JSON.stringify(responses.shift()) } }] }
+      } } },
     } as OpenAI,
   }
 }
 
-it('succeeds after correcting an invalid response', async () => {
-  const { client, requests } = mockClient([
-    { ...validPlan, workouts: [] },
-    validPlan,
-  ])
+it('requests only three repeating templates and sends history aggregates', async () => {
+  const { client, requests } = mockClient([validPlan])
+  const history = [{ exercise: 'Squat', appearances: 3, averageKg: 62.5, averageReps: 5 }]
 
-  expect(await generatePlan(client, 'deepseek-test', 'Get stronger')).toEqual(validPlan)
-  expect(requests).toHaveLength(2)
-  expect(requests[0]?.messages[0]?.content).toContain('"additionalProperties":false')
-  expect(requests[1]?.messages.at(-1)?.content).toContain('Validation issues:')
-  expect(requests[1]?.messages.at(-1)?.content).toContain('Required JSON Schema:')
+  expect(await generatePlan(client, 'deepseek-test', 'Get stronger', history)).toEqual(validPlan)
+  expect(requests[0]?.messages[0]?.content).toContain('exactly three ordered workout templates')
+  expect(requests[0]?.messages[1]?.content).toContain('"averageKg":62.5')
 })
 
-it('returns 502 after two invalid responses', async () => {
-  const { client, requests } = mockClient([
-    { ...validPlan, workouts: [] },
-    { ...validPlan, workouts: [] },
-  ])
-
-  await expect(generatePlan(client, 'deepseek-test', 'Get stronger')).rejects.toMatchObject({
-    statusCode: 502,
-    statusMessage: 'LLM returned an invalid plan response.',
-  })
+it('succeeds after correcting an invalid response', async () => {
+  const { client, requests } = mockClient([{ ...validPlan, workouts: [] }, validPlan])
+  expect(await generatePlan(client, 'deepseek-test', 'Get stronger')).toEqual(validPlan)
   expect(requests).toHaveLength(2)
 })

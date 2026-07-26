@@ -9,8 +9,8 @@ import {
 const requiredSchema = JSON.stringify(createPlanLlmResponseJsonSchema)
 
 const systemPrompt = `You generate useful workout plans as a practical strength and conditioning coach.
-Create a complete 12-week plan tailored to the user's stated activity and goal. Include every workout for all 12 weeks and include at least one workout in each week.
-Order workouts chronologically. Set the first workout's restDaysAfterPrevious to 0 because it is due on the plan creation day. For every later workout, restDaysAfterPrevious is the number of full rest days after the previous workout: 0 means the next day, 1 means two days later. Do not use fixed dates, weekdays, or week numbers.
+Create exactly three ordered workout templates tailored to the user's request. These templates repeat forever in the given order, so do not add dates, weekdays, weeks, or scheduling fields.
+Use numeric-looking prescriptions as strings for reps and weight, and explicitly identify warmup sets.
 Return only valid JSON matching this JSON Schema, with no markdown or extra text:
 ${requiredSchema}`
 
@@ -33,11 +33,12 @@ function parseResponse(content: string | null | undefined) {
 export async function generatePlan(
   client: OpenAI,
   model: string,
-  goal: string,
+  request: string,
+  exerciseHistory: ExerciseHistory[] = [],
 ): Promise<CreatePlanLlmResponse> {
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: JSON.stringify({ goal }) },
+    { role: 'user', content: JSON.stringify({ request, exerciseHistory }) },
   ]
   const completion = await client.chat.completions.create({
     model,
@@ -88,4 +89,11 @@ ${requiredSchema}`,
   }
 
   return corrected.data
+}
+
+export interface ExerciseHistory {
+  exercise: string
+  appearances: number
+  averageKg: number
+  averageReps: number
 }

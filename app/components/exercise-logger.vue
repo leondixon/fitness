@@ -1,147 +1,114 @@
 <script setup lang="ts">
-interface ExerciseLoggerSet {
-  previous?: string
-  warmup?: boolean
-}
+import type { z } from 'zod'
+import type { loggedSetSchema } from '~~/server/schema/session'
+import type { Exercise } from '~~/server/schema/workout'
 
-interface LoggedSet {
-  index: number
-  warmup: boolean
-  previous: string
-  kg: string | number
-  reps: string | number
-  done: boolean
-}
+type LoggedSet = z.infer<typeof loggedSetSchema>
 
-const props = withDefaults(
-  defineProps<{
-    exerciseName?: string
-    restTime?: string
-    workSetTime?: string
-    estimatedTime?: string
-    sets?: ExerciseLoggerSet[]
-  }>(),
-  {
-    exerciseName: 'Exercise',
-    restTime: undefined,
-    workSetTime: undefined,
-    estimatedTime: undefined,
-    sets: () => [],
-  },
-)
+const props = defineProps<{
+  exercise: Exercise
+  initialSets?: LoggedSet[]
+  completed?: boolean
+  saving?: boolean
+}>()
 
-const loggedSets = ref<LoggedSet[]>([])
+const emit = defineEmits<{
+  done: [sets: LoggedSet[]]
+  undo: []
+}>()
 
-const hasValue = (value: string | number) => String(value).trim() !== ''
-
-const canCompleteSet = (set: LoggedSet) => hasValue(set.kg) && hasValue(set.reps)
-
-function setLabel(index: number) {
-  const set = loggedSets.value[index]
-
-  if (set?.warmup) {
-    return 'W'
-  }
-
-  return loggedSets.value.slice(0, index + 1).filter(entry => !entry.warmup).length.toString()
-}
+const values = ref<Record<number, { kg: string, reps: string }>>({})
 
 watch(
-  () => props.sets,
+  () => props.initialSets,
   (sets) => {
-    loggedSets.value = sets.map((set, index) => {
-      const existingSet = loggedSets.value[index]
-
-      return {
-        index,
-        warmup: set.warmup === true,
-        previous: set.previous ?? '—',
-        kg: existingSet?.kg ?? '',
-        reps: existingSet?.reps ?? '',
-        done: existingSet?.done ?? false,
-      }
-    })
+    const existing = new Map((sets ?? []).map(set => [set.position, set]))
+    values.value = Object.fromEntries(props.exercise.sets.map((set) => {
+      const logged = existing.get(set.position)
+      return [set.position, {
+        kg: logged ? String(logged.kg) : '',
+        reps: logged ? String(logged.reps) : '',
+      }]
+    }))
   },
   { immediate: true },
 )
 
-watch(
-  loggedSets,
-  (currentSets) => {
-    currentSets.forEach((set) => {
-      if (!canCompleteSet(set)) {
-        set.done = false
-      }
-    })
-  },
-  { deep: true },
-)
+const workingSets = computed(() => props.exercise.sets.filter(set => !set.warmup))
+
+function save() {
+  const sets = workingSets.value.flatMap((set) => {
+    const value = values.value[set.position]
+    if (!value?.kg.trim() || !value.reps.trim())
+      return []
+    return [{
+      position: set.position,
+      kg: Number(value.kg),
+      reps: Number(value.reps),
+    }]
+  }).filter(set =>
+    Number.isFinite(set.kg) && set.kg >= 0
+    && Number.isInteger(set.reps) && set.reps >= 0,
+  )
+  emit('done', sets)
+}
 </script>
 
 <template>
-  <section
-    class="w-full rounded-2xl border border-gray-200 bg-white p-3 shadow-[0_10px_30px_rgb(15_23_42_/_7%)] dark:border-slate-800 dark:bg-slate-900 sm:p-4"
-    aria-labelledby="exercise-logger-title"
-  >
-    <div class="mb-3">
-      <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-        Exercise
-      </p>
-      <h2 id="exercise-logger-title" class="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">
-        {{ exerciseName }}
-      </h2>
-      <p v-if="restTime || workSetTime || estimatedTime" class="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-        <span v-if="workSetTime">Work {{ workSetTime }}/set</span>
-        <span v-if="workSetTime && restTime"> · </span>
-        <span v-if="restTime">Rest {{ restTime }}</span>
-        <span v-if="(workSetTime || restTime) && estimatedTime"> · </span>
-        <span v-if="estimatedTime">Est {{ estimatedTime }}</span>
-      </p>
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">
+          Exercise
+        </p>
+        <h2 class="text-xl font-bold text-slate-900">
+          {{ exercise.name }}
+        </h2>
+      </div>
+      <span v-if="completed" class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">Done</span>
     </div>
 
-    <div class="grid gap-1.5" role="table" aria-label="Exercise sets">
-      <div
-        class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 text-[0.65rem] font-extrabold uppercase tracking-[0.05em] text-slate-500 dark:text-slate-400 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
-        role="row"
-      >
-        <span role="columnheader">Set</span>
-        <span role="columnheader">Previous</span>
-        <span role="columnheader">kg</span>
-        <span role="columnheader">Reps</span>
-        <span role="columnheader">Done</span>
+    <div class="mt-3 grid gap-2">
+      <div class="grid grid-cols-[36px_1fr_1fr_1fr] gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+        <span>Set</span><span>Target</span><span>kg</span><span>Reps</span>
       </div>
+      <div
+        v-for="(set, index) in exercise.sets"
+        :key="set.id"
+        class="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2 rounded-xl bg-slate-50 p-2"
+      >
+        <strong>{{ set.warmup ? 'W' : index + 1 }}</strong>
+        <span class="text-xs text-slate-600">{{ set.weight }} × {{ set.reps }}</span>
+        <template v-if="set.warmup">
+          <span class="col-span-2 text-xs font-semibold text-slate-400">Warmup — not logged</span>
+        </template>
+        <template v-else>
+          <input
+            v-model="values[set.position]!.kg"
+            class="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5"
+            min="0"
+            inputmode="decimal"
+            type="number"
+          >
+          <input
+            v-model="values[set.position]!.reps"
+            class="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5"
+            min="0"
+            step="1"
+            inputmode="numeric"
+            type="number"
+          >
+        </template>
+      </div>
+    </div>
 
-      <div
-        v-for="(set, index) in loggedSets" :key="set.index"
-        class="grid grid-cols-[34px_minmax(76px,1fr)_minmax(54px,72px)_minmax(54px,72px)_38px] items-center gap-1 rounded-xl px-1.5 py-1.5 sm:grid-cols-[44px_minmax(100px,1fr)_minmax(70px,90px)_minmax(70px,90px)_52px] sm:gap-2 sm:px-2"
-        :class="set.done ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-slate-50 dark:bg-slate-800'" role="row"
-      >
-        <strong class="text-sm text-slate-900 dark:text-slate-100" role="cell">{{ setLabel(index) }}</strong>
-        <span class="truncate text-xs font-semibold text-slate-600 dark:text-slate-400" role="cell">{{ set.previous }}</span>
-        <label role="cell">
-          <span class="sr-only">Weight in kg for set {{ setLabel(index) }}</span>
-          <input
-            v-model="set.kg"
-            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            type="text" inputmode="decimal" placeholder="0"
-          >
-        </label>
-        <label role="cell">
-          <span class="sr-only">Reps for set {{ setLabel(index) }}</span>
-          <input
-            v-model="set.reps"
-            class="box-border w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-inherit text-slate-900 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            type="text" inputmode="numeric" placeholder="0"
-          >
-        </label>
-        <label class="grid place-items-center" role="cell">
-          <input
-            v-model="set.done" class="size-5 accent-green-600 disabled:cursor-not-allowed disabled:opacity-45"
-            type="checkbox" :disabled="!canCompleteSet(set)"
-          >
-          <span class="sr-only">Mark set {{ setLabel(index) }} done</span>
-        </label>
-      </div>
+    <div class="mt-3 flex gap-2">
+      <button class="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="saving" type="button" @click="save">
+        {{ saving ? 'Saving…' : completed ? 'Save again' : 'Done' }}
+      </button>
+      <button v-if="completed" class="rounded-xl px-3 py-2 text-sm font-bold text-slate-600" :disabled="saving" type="button" @click="emit('undo')">
+        Undo
+      </button>
     </div>
   </section>
 </template>

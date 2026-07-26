@@ -1,30 +1,32 @@
 import { z } from 'zod'
 
-export const exerciseSetSchema = z.object({
-  previous: z.string().optional(),
-  warmup: z.boolean().optional(),
-}).passthrough()
+export const prescribedSetSchema = z.strictObject({
+  id: z.string().uuid(),
+  position: z.number().int().nonnegative(),
+  reps: z.string().trim().min(1),
+  weight: z.string().trim().min(1),
+  warmup: z.boolean(),
+})
 
-export const exerciseSchema = z.object({
-  id: z.union([z.string(), z.number()]).optional(),
-  name: z.string(),
-  restSeconds: z.number().int().nonnegative().optional(),
-  workSetSeconds: z.number().int().positive().optional(),
-  sets: z.array(exerciseSetSchema),
-}).passthrough()
+export const exerciseSchema = z.strictObject({
+  id: z.string().uuid(),
+  position: z.number().int().nonnegative(),
+  name: z.string().trim().min(1),
+  normalizedName: z.string().trim().min(1),
+  restSeconds: z.number().int().nonnegative().nullable(),
+  workSetSeconds: z.number().int().positive().nullable(),
+  sets: z.array(prescribedSetSchema).min(1),
+})
 
-export const workoutSchema = z.object({
-  id: z.union([z.string(), z.number()]).optional(),
-  previousWorkoutId: z.union([z.string(), z.number()]).nullable().optional(),
-  restDaysAfterPrevious: z.number().int().nonnegative().optional(),
-  title: z.string(),
-  subtitle: z.string().optional(),
-  date: z.string().optional(),
-  focus: z.string().optional(),
-  notes: z.string().optional(),
+export const workoutSchema = z.strictObject({
+  id: z.string().uuid(),
+  position: z.number().int().nonnegative(),
+  title: z.string().trim().min(1),
+  subtitle: z.string().nullable(),
+  focus: z.string().nullable(),
+  notes: z.string().nullable(),
   exercises: z.array(exerciseSchema).min(1),
-}).passthrough()
+})
 
-export type ExerciseSet = z.infer<typeof exerciseSetSchema>
 export type Exercise = z.infer<typeof exerciseSchema>
 export type Workout = z.infer<typeof workoutSchema>

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { workoutPlanSchema } from './workoutPlan'
 
-export const updatePlanRequestSchema = z.object({
+export const updatePlanRequestSchema = z.strictObject({
   adjustment: z.string().trim().min(1, 'Adjustment is required'),
 })
 

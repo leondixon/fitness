@@ -1,31 +1,34 @@
-import { mapWorkoutPlanRow } from '~~/server/schema/persistedPlan'
 import { updatePlanRequestSchema, updatePlanResponseSchema } from '~~/server/schema/updatePlan'
-import { getOwnedPlan } from '~~/server/utils/plans'
-import { getSupabaseServerClient, requireUser } from '~~/server/utils/supabase'
+import { generatePlan } from '~~/server/utils/create-plan'
+import { getDeepSeekClient } from '~~/server/utils/deepseek'
+import { getCurrentPlan, getExerciseHistory } from '~~/server/utils/plans'
+import { activateRoutine, buildRoutinePayload } from '~~/server/utils/routine-generation'
+import { requireUser } from '~~/server/utils/supabase'
 
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id)
-    throw createError({ statusCode: 400, statusMessage: 'Plan id is required.' })
-
   const user = await requireUser(event)
   const input = updatePlanRequestSchema.parse(await readBody(event))
-  const plan = await getOwnedPlan(event, user.id, id)
-  const version = plan.version + 1
-  const { data, error } = await getSupabaseServerClient(event)
-    .from('workout_plans')
-    .update({
-      summary: `${plan.summary}\n\nUpdate ${version}: ${input.adjustment}`,
-      change_log: [...plan.changeLog, input.adjustment],
-      version,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', plan.id)
-    .eq('user_id', user.id)
-    .select('id,user_id,goal,title,summary,workouts,change_log,version,created_at,updated_at')
-    .single()
+  const current = await getCurrentPlan(event, user.id)
+  if (!current || current.id !== getRouterParam(event, 'id'))
+    throw createError({ statusCode: 404, statusMessage: 'Workout routine not found.' })
 
-  if (error || !data)
-    throw createError({ statusCode: 500, statusMessage: 'Could not update the workout plan.' })
-  return updatePlanResponseSchema.parse(mapWorkoutPlanRow(data))
+  const history = await getExerciseHistory(event, user.id)
+  const config = useRuntimeConfig()
+  const generated = await generatePlan(
+    getDeepSeekClient(),
+    config.deepseekModel || 'deepseek-v4-flash',
+    input.adjustment,
+    history,
+  )
+  await activateRoutine(
+    event,
+    user.id,
+    buildRoutinePayload(generated, input.adjustment, current.version + 1),
+  )
+
+  const replacement = await getCurrentPlan(event, user.id)
+  if (!replacement)
+    throw createError({ statusCode: 500, statusMessage: 'Could not load the replacement routine.' })
+
+  return updatePlanResponseSchema.parse(replacement)
 })

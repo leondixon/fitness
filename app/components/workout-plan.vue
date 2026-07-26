@@ -1,193 +1,61 @@
 <script setup lang="ts">
-import { formatWorkoutPendingDays, workoutPendingDays } from '~/utils/workout-schedule'
+import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
 
-interface WorkoutPlanExercise {
-  id: string | number
-  name: string
-  restSeconds?: number
-  workSetSeconds?: number
-  sets: unknown[]
-}
+defineProps<{ plan: WorkoutPlan }>()
+const emit = defineEmits<{ select: [] }>()
 
-interface WorkoutPlanWorkout {
-  id?: string | number
-  previousWorkoutId?: string | number | null
-  restDaysAfterPrevious?: number
-  title: string
-  subtitle?: string
-  date?: string
-  focus?: string
-  notes?: string
-  exercises: WorkoutPlanExercise[]
-}
-
-const props = withDefaults(
-  defineProps<{
-    createdAt?: string
-    workouts?: WorkoutPlanWorkout[]
-    endingPlan?: boolean
-  }>(),
-  {
-    createdAt: '',
-    workouts: () => [],
-    endingPlan: false,
-  },
-)
-
-const emit = defineEmits<{
-  endPlan: []
-  select: [workout: WorkoutPlanWorkout]
-}>()
-
-const confirmingEndPlan = ref(false)
-const now = new Date()
-
-const pendingDays = computed(() =>
-  props.createdAt
-    ? workoutPendingDays(props.workouts, props.createdAt, now)
-    : new Map<string, number>(),
-)
-
-function formatDuration(seconds: number) {
-  if (seconds < 60) {
-    return `${seconds}s`
-  }
-
-  const minutes = Math.ceil(seconds / 60)
-
-  if (minutes < 60) {
-    return `${minutes}m`
-  }
-
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-
-  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`
-}
-
-function exerciseDurationSeconds(exercise: WorkoutPlanExercise) {
-  const workSetSeconds = exercise.workSetSeconds ?? 45
-  const restSeconds = exercise.restSeconds ?? 90
-  const setCount = exercise.sets.length
-  const restCount = Math.max(setCount - 1, 0)
-
-  return setCount * workSetSeconds + restCount * restSeconds
-}
-
-function displayDurationSeconds(seconds: number) {
-  if (seconds < 60) {
-    return seconds
-  }
-
-  return Math.ceil(seconds / 60) * 60
-}
-
-function workoutDuration(workout: WorkoutPlanWorkout) {
-  const seconds = workout.exercises.reduce(
-    (total, exercise) => total + displayDurationSeconds(exerciseDurationSeconds(exercise)),
-    0,
-  )
-
-  return formatDuration(seconds)
-}
-
-function totalSets(workout: WorkoutPlanWorkout) {
+function totalSets(workout: WorkoutPlan['workouts'][number]) {
   return workout.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)
 }
 </script>
 
 <template>
   <section class="mx-auto grid w-full max-w-[860px] gap-3">
-    <header class="rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white shadow-[0_10px_30px_rgb(15_23_42_/_12%)] dark:border-slate-800 sm:p-5">
-      <p class="mb-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-emerald-300">
-        Plan
+    <header class="rounded-2xl bg-slate-950 p-5 text-white shadow-lg">
+      <p class="text-[0.65rem] font-bold uppercase tracking-wider text-emerald-300">
+        Repeating routine · Version {{ plan.version }}
       </p>
-      <div class="flex items-center justify-between gap-4">
-        <h1 class="text-2xl font-extrabold leading-tight">
-          Upcoming workouts
-        </h1>
-        <div v-if="confirmingEndPlan" class="flex shrink-0 items-center gap-2">
-          <button
-            class="rounded-xl px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white"
-            :disabled="endingPlan"
-            type="button"
-            @click="confirmingEndPlan = false"
-          >
-            Cancel
-          </button>
-          <button
-            class="rounded-xl border border-red-400/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:border-red-300 hover:bg-red-900/60 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="endingPlan"
-            type="button"
-            @click="emit('endPlan')"
-          >
-            {{ endingPlan ? 'Ending…' : 'Yes, end plan' }}
-          </button>
-        </div>
-        <button
-          v-else
-          class="shrink-0 rounded-xl border border-red-400/60 px-3 py-2 text-xs font-bold text-red-200 transition hover:border-red-300 hover:bg-red-950/50 hover:text-red-100"
-          type="button"
-          @click="confirmingEndPlan = true"
-        >
-          End plan
-        </button>
-      </div>
-      <p class="mt-1 text-sm leading-5 text-slate-300">
-        Pick a session to open the workout logger.
+      <h1 class="text-2xl font-extrabold">
+        Next five workouts
+      </h1>
+      <p class="mt-1 text-sm text-slate-300">
+        Complete the first session to advance the rotation.
       </p>
     </header>
 
-    <div class="grid gap-3">
-      <button
-        v-for="workout in workouts"
-        :key="workout.id ?? workout.title"
-        class="w-full rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-[0_10px_30px_rgb(15_23_42_/_7%)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-[0_16px_40px_rgb(15_23_42_/_10%)] focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-700 sm:p-4"
-        type="button"
-        @click="emit('select', workout)"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-              {{ formatWorkoutPendingDays(workout.id === undefined ? undefined : pendingDays.get(String(workout.id))) }}
-            </p>
-            <h2 class="truncate text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">
-              {{ workout.title }}
-            </h2>
-            <p v-if="workout.focus" class="mt-1 truncate text-xs font-semibold text-slate-500 dark:text-slate-400">
-              {{ workout.focus }}
-            </p>
-          </div>
-
-          <div class="shrink-0 rounded-xl bg-emerald-50 px-3 py-2 text-right text-emerald-900 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20">
-            <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-emerald-700 dark:text-emerald-400">
-              Est
-            </p>
-            <p class="text-lg font-black leading-none">
-              {{ workoutDuration(workout) }}
-            </p>
-          </div>
+    <button
+      v-for="upcoming in plan.upcoming"
+      :key="upcoming.occurrence"
+      class="w-full rounded-2xl border bg-white p-4 text-left shadow-sm"
+      :class="upcoming.loggable ? 'border-emerald-400 hover:border-emerald-600' : 'cursor-default border-slate-200 opacity-75'"
+      :disabled="!upcoming.loggable"
+      type="button"
+      @click="upcoming.loggable && emit('select')"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-[0.65rem] font-bold uppercase tracking-wider" :class="upcoming.loggable ? 'text-emerald-700' : 'text-slate-500'">
+            {{ upcoming.loggable ? 'Up next · Start or resume' : `Preview ${upcoming.occurrence + 1}` }}
+          </p>
+          <h2 class="text-xl font-bold text-slate-900">
+            {{ upcoming.workout.title }}
+          </h2>
+          <p v-if="upcoming.workout.focus" class="mt-1 text-xs font-semibold text-slate-500">
+            {{ upcoming.workout.focus }}
+          </p>
         </div>
-
-        <div class="mt-3 grid grid-cols-2 gap-1.5 text-center">
-          <div class="rounded-xl bg-slate-50 px-2 py-1.5 dark:bg-slate-800">
-            <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-              Exercises
-            </p>
-            <p class="text-lg font-black leading-tight text-slate-900 dark:text-slate-100">
-              {{ workout.exercises.length }}
-            </p>
-          </div>
-          <div class="rounded-xl bg-slate-50 px-2 py-1.5 dark:bg-slate-800">
-            <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-              Sets
-            </p>
-            <p class="text-lg font-black leading-tight text-slate-900 dark:text-slate-100">
-              {{ totalSets(workout) }}
-            </p>
-          </div>
+        <div class="rounded-xl bg-slate-100 px-3 py-2 text-center">
+          <p class="text-lg font-black">
+            {{ upcoming.workout.exercises.length }}
+          </p>
+          <p class="text-[0.6rem] font-bold uppercase text-slate-500">
+            exercises
+          </p>
         </div>
-      </button>
-    </div>
+      </div>
+      <p class="mt-3 text-xs font-semibold text-slate-500">
+        {{ totalSets(upcoming.workout) }} prescribed sets
+      </p>
+    </button>
   </section>
 </template>

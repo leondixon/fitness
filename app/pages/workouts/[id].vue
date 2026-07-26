@@ -1,38 +1,108 @@
 <script setup lang="ts">
+import type { z } from 'zod'
+import type { workoutSessionSchema } from '~~/server/schema/session'
 import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
-import { workoutPendingDays } from '~/utils/workout-schedule'
+
+type WorkoutSession = z.infer<typeof workoutSessionSchema>
 
 definePageMeta({ middleware: 'require-plan' })
 
 const route = useRoute()
-const { data } = await useFetch('/api/plans/current')
-const plan = computed(() => data.value?.plan as WorkoutPlan | null | undefined)
-const selectedWorkout = computed(() => plan.value?.workouts.find(workout => String(workout.id) === String(route.params.id)))
-const now = new Date()
+const { data: planData } = await useFetch('/api/plans/current')
+const plan = computed(() => planData.value?.plan as WorkoutPlan | null | undefined)
+const nextWorkout = computed(() => plan.value?.upcoming[0]?.workout)
+const isNextWorkout = computed(() => nextWorkout.value?.id === route.params.id)
+const session = ref<WorkoutSession>()
+const savingExerciseId = ref('')
+const finishing = ref(false)
+const requestError = ref('')
 
-const selectedWorkoutPendingDays = computed(() => {
-  if (!plan.value || !selectedWorkout.value?.id)
-    return undefined
+if (isNextWorkout.value) {
+  const response = await $fetch('/api/sessions/current', { method: 'POST' })
+  session.value = response.session
+}
 
-  return workoutPendingDays(plan.value.workouts, plan.value.createdAt, now)
-    .get(String(selectedWorkout.value.id))
-})
+async function saveExercise(exerciseId: string, sets: { position: number, kg: number, reps: number }[]) {
+  if (!session.value)
+    return
+  savingExerciseId.value = exerciseId
+  requestError.value = ''
+  try {
+    const response = await $fetch(`/api/sessions/${session.value.id}/exercises`, {
+      method: 'PUT',
+      body: { exerciseId, sets },
+    })
+    session.value = response.session
+  }
+  catch (error) {
+    requestError.value = error instanceof Error ? error.message : 'Could not save this exercise.'
+  }
+  finally {
+    savingExerciseId.value = ''
+  }
+}
+
+async function undoExercise(exerciseId: string) {
+  if (!session.value)
+    return
+  savingExerciseId.value = exerciseId
+  try {
+    const response = await $fetch(`/api/sessions/${session.value.id}/exercises`, {
+      method: 'DELETE',
+      body: { exerciseId },
+    })
+    session.value = response.session
+  }
+  finally {
+    savingExerciseId.value = ''
+  }
+}
+
+async function finish() {
+  if (!session.value || finishing.value)
+    return
+  finishing.value = true
+  requestError.value = ''
+  try {
+    await $fetch(`/api/sessions/${session.value.id}/finish`, { method: 'POST' })
+    await navigateTo('/workouts')
+  }
+  catch (error) {
+    requestError.value = error instanceof Error ? error.message : 'Could not finish the workout.'
+  }
+  finally {
+    finishing.value = false
+  }
+}
 </script>
 
 <template>
   <main class="min-h-screen bg-slate-100 p-3">
     <div class="mx-auto grid w-full max-w-[860px] gap-3">
-      <NuxtLink class="w-fit rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm hover:text-emerald-700" to="/workouts">
-        ← Back to plan
+      <NuxtLink class="w-fit rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm" to="/workouts">
+        ← Back to routine
       </NuxtLink>
-      <section v-if="!selectedWorkout" class="rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm">
+      <p v-if="requestError" class="rounded-xl bg-white p-3 text-sm font-semibold text-red-700">
+        {{ requestError }}
+      </p>
+      <section v-if="!isNextWorkout || !nextWorkout" class="rounded-2xl bg-white p-4">
         <h1 class="text-xl font-extrabold">
-          Workout not found
-        </h1><p class="mt-1 text-sm text-slate-500">
-          This workout is not in your current plan.
+          Preview workouts cannot be started
+        </h1>
+        <p class="mt-1 text-sm text-slate-500">
+          Finish the current workout to advance the rotation.
         </p>
       </section>
-      <workout-logger v-else :pending-days="selectedWorkoutPendingDays" :workout="selectedWorkout" />
+      <workout-logger
+        v-else-if="session"
+        :finishing="finishing"
+        :saving-exercise-id="savingExerciseId"
+        :session="session"
+        :workout="nextWorkout"
+        @finish="finish"
+        @save="saveExercise"
+        @undo="undoExercise"
+      />
     </div>
   </main>
 </template>
