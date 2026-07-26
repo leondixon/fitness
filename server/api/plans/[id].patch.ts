@@ -1,4 +1,5 @@
 import { updatePlanRequestSchema, updatePlanResponseSchema } from '~~/server/schema/updatePlan'
+import { getBodyNotes } from '~~/server/utils/body-notes'
 import { generatePlan } from '~~/server/utils/create-plan'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
 import { getCurrentPlan, getExerciseHistory } from '~~/server/utils/plans'
@@ -13,12 +14,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Workout routine not found.' })
 
   const history = await getExerciseHistory(event, user.id)
+  const bodyNotes = await getBodyNotes(event, user.id)
   const config = useRuntimeConfig()
   const generated = await generatePlan(
     getDeepSeekClient(),
     config.deepseekModel || 'deepseek-v4-flash',
     input.adjustment,
     history,
+    bodyNotes,
   )
   await activateRoutine(
     event,

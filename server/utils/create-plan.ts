@@ -11,6 +11,7 @@ const requiredSchema = JSON.stringify(createPlanLlmResponseJsonSchema)
 const systemPrompt = `You generate useful workout plans as a practical strength and conditioning coach.
 Create exactly three ordered workout templates tailored to the user's request. These templates repeat forever in the given order, so do not add dates, weekdays, weeks, or scheduling fields.
 Use numeric-looking prescriptions as strings for reps and weight, and explicitly identify warmup sets.
+The user payload may include bodyNotes with injuries, imbalances, or other physical context. Use them to steer exercise selection and programming.
 Return only valid JSON matching this JSON Schema, with no markdown or extra text:
 ${requiredSchema}`
 
@@ -35,10 +36,11 @@ export async function generatePlan(
   model: string,
   request: string,
   exerciseHistory: ExerciseHistory[] = [],
+  bodyNotes: string | null = null,
 ): Promise<CreatePlanLlmResponse> {
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: JSON.stringify({ request, exerciseHistory }) },
+    { role: 'user', content: JSON.stringify({ request, bodyNotes, exerciseHistory }) },
   ]
   const completion = await client.chat.completions.create({
     model,

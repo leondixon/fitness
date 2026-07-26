@@ -32,13 +32,15 @@ function mockClient(responses: unknown[]) {
   }
 }
 
-it('requests only three repeating templates and sends history aggregates', async () => {
+it('requests only three repeating templates and sends history aggregates and body notes', async () => {
   const { client, requests } = mockClient([validPlan])
   const history = [{ exercise: 'Squat', appearances: 3, averageKg: 62.5, averageReps: 5 }]
 
-  expect(await generatePlan(client, 'deepseek-test', 'Get stronger', history)).toEqual(validPlan)
+  expect(await generatePlan(client, 'deepseek-test', 'Get stronger', history, 'Left knee gets sore after deep squats.')).toEqual(validPlan)
   expect(requests[0]?.messages[0]?.content).toContain('exactly three ordered workout templates')
+  expect(requests[0]?.messages[0]?.content).toContain('bodyNotes with injuries, imbalances')
   expect(requests[0]?.messages[1]?.content).toContain('"averageKg":62.5')
+  expect(requests[0]?.messages[1]?.content).toContain('"bodyNotes":"Left knee gets sore after deep squats."')
 })
 
 it('succeeds after correcting an invalid response', async () => {

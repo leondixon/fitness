@@ -1,4 +1,5 @@
 import { createPlanRequestSchema, createPlanResponseSchema } from '~~/server/schema/create-plan'
+import { getBodyNotes } from '~~/server/utils/body-notes'
 import { generatePlan } from '~~/server/utils/create-plan'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
 import { getCurrentPlan } from '~~/server/utils/plans'
@@ -13,10 +14,13 @@ export default defineEventHandler(async (event) => {
     return createPlanResponseSchema.parse(existing)
 
   const config = useRuntimeConfig()
+  const bodyNotes = await getBodyNotes(event, user.id)
   const generated = await generatePlan(
     getDeepSeekClient(),
     config.deepseekModel || 'deepseek-v4-flash',
     input.goal,
+    [],
+    bodyNotes,
   )
   await activateRoutine(event, user.id, buildRoutinePayload(generated, input.goal, 1))
 
