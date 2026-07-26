@@ -8,13 +8,15 @@ export const exerciseSetSchema = z.object({
 export const exerciseSchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
   name: z.string(),
-  restSeconds: z.number().int().positive().optional(),
+  restSeconds: z.number().int().nonnegative().optional(),
   workSetSeconds: z.number().int().positive().optional(),
   sets: z.array(exerciseSetSchema),
 }).passthrough()
 
 export const workoutSchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
+  previousWorkoutId: z.union([z.string(), z.number()]).nullable().optional(),
+  restDaysAfterPrevious: z.number().int().nonnegative().optional(),
   title: z.string(),
   subtitle: z.string().optional(),
   date: z.string().optional(),

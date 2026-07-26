@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatWorkoutPendingDays, workoutPendingDays } from '~/utils/workout-schedule'
+
 interface WorkoutPlanExercise {
   id: string | number
   name: string
@@ -9,6 +11,8 @@ interface WorkoutPlanExercise {
 
 interface WorkoutPlanWorkout {
   id?: string | number
+  previousWorkoutId?: string | number | null
+  restDaysAfterPrevious?: number
   title: string
   subtitle?: string
   date?: string
@@ -17,12 +21,14 @@ interface WorkoutPlanWorkout {
   exercises: WorkoutPlanExercise[]
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
+    createdAt?: string
     workouts?: WorkoutPlanWorkout[]
     endingPlan?: boolean
   }>(),
   {
+    createdAt: '',
     workouts: () => [],
     endingPlan: false,
   },
@@ -34,6 +40,13 @@ const emit = defineEmits<{
 }>()
 
 const confirmingEndPlan = ref(false)
+const now = new Date()
+
+const pendingDays = computed(() =>
+  props.createdAt
+    ? workoutPendingDays(props.workouts, props.createdAt, now)
+    : new Map<string, number>(),
+)
 
 function formatDuration(seconds: number) {
   if (seconds < 60) {
@@ -136,7 +149,7 @@ function totalSets(workout: WorkoutPlanWorkout) {
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="mb-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-              {{ workout.date ?? 'Upcoming' }}
+              {{ formatWorkoutPendingDays(workout.id === undefined ? undefined : pendingDays.get(String(workout.id))) }}
             </p>
             <h2 class="truncate text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">
               {{ workout.title }}

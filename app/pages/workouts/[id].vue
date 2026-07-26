@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
+import { workoutPendingDays } from '~/utils/workout-schedule'
 
 definePageMeta({ middleware: 'require-plan' })
 
@@ -7,6 +8,15 @@ const route = useRoute()
 const { data } = await useFetch('/api/plans/current')
 const plan = computed(() => data.value?.plan as WorkoutPlan | null | undefined)
 const selectedWorkout = computed(() => plan.value?.workouts.find(workout => String(workout.id) === String(route.params.id)))
+const now = new Date()
+
+const selectedWorkoutPendingDays = computed(() => {
+  if (!plan.value || !selectedWorkout.value?.id)
+    return undefined
+
+  return workoutPendingDays(plan.value.workouts, plan.value.createdAt, now)
+    .get(String(selectedWorkout.value.id))
+})
 </script>
 
 <template>
@@ -22,7 +32,7 @@ const selectedWorkout = computed(() => plan.value?.workouts.find(workout => Stri
           This workout is not in your current plan.
         </p>
       </section>
-      <workout-logger v-else :workout="selectedWorkout" />
+      <workout-logger v-else :pending-days="selectedWorkoutPendingDays" :workout="selectedWorkout" />
     </div>
   </main>
 </template>

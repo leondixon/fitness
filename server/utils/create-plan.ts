@@ -8,7 +8,10 @@ import {
 
 const requiredSchema = JSON.stringify(createPlanLlmResponseJsonSchema)
 
-const systemPrompt = `You generate useful workout plans as a practical strength and conditioning coach. Return only valid JSON matching this JSON Schema, with no markdown or extra text:
+const systemPrompt = `You generate useful workout plans as a practical strength and conditioning coach.
+Create a complete 12-week plan tailored to the user's stated activity and goal. Include every workout for all 12 weeks and include at least one workout in each week.
+Order workouts chronologically. Set the first workout's restDaysAfterPrevious to 0 because it is due on the plan creation day. For every later workout, restDaysAfterPrevious is the number of full rest days after the previous workout: 0 means the next day, 1 means two days later. Do not use fixed dates, weekdays, or week numbers.
+Return only valid JSON matching this JSON Schema, with no markdown or extra text:
 ${requiredSchema}`
 
 function parseResponse(content: string | null | undefined) {

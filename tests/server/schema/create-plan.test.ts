@@ -8,15 +8,15 @@ import {
 const canonicalResponse = {
   title: 'Three-day strength plan',
   summary: 'Full-body strength training on alternating days.',
-  workouts: [{
-    title: 'Workout A',
+  workouts: Array.from({ length: 12 }, (_, index) => ({
+    restDaysAfterPrevious: index === 0 ? 0 : 6,
+    title: `Workout ${index + 1}`,
     subtitle: 'Squat emphasis',
-    date: 'Monday',
     focus: 'Strength',
     notes: 'Leave two reps in reserve.',
     exercises: [{
       name: 'Back squat',
-      restSeconds: 120,
+      restSeconds: index === 0 ? 0 : 120,
       workSetSeconds: 45,
       sets: [{
         reps: '8-10',
@@ -25,7 +25,7 @@ const canonicalResponse = {
         warmup: false,
       }],
     }],
-  }],
+  })),
 }
 
 it('accepts a complete create-plan LLM response', () => {
@@ -36,6 +36,14 @@ it('rejects invalid generated plans', () => {
   const invalidPlans = [
     { ...canonicalResponse, summary: undefined },
     { ...canonicalResponse, workouts: [] },
+    { ...canonicalResponse, workouts: canonicalResponse.workouts.slice(0, 11) },
+    {
+      ...canonicalResponse,
+      workouts: canonicalResponse.workouts.map((workout, index) => ({
+        ...workout,
+        restDaysAfterPrevious: index === 0 ? 1 : workout.restDaysAfterPrevious,
+      })),
+    },
     {
       ...canonicalResponse,
       workouts: [{ ...canonicalResponse.workouts[0], exercises: [] }],
@@ -67,7 +75,7 @@ it('serializes the Zod required and optional fields to JSON Schema', () => {
   expect(createPlanLlmResponseJsonSchema.additionalProperties).toBe(false)
 
   const workoutSchema = createPlanLlmResponseJsonSchema.properties.workouts.items
-  expect(workoutSchema.required).toEqual(['title', 'exercises'])
+  expect(workoutSchema.required).toEqual(['restDaysAfterPrevious', 'title', 'exercises'])
   expect(workoutSchema.additionalProperties).toBe(false)
 
   const exerciseSchema = workoutSchema.properties.exercises.items

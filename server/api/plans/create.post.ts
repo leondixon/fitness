@@ -29,14 +29,21 @@ export default defineEventHandler(async (event) => {
     title: generated.title,
     summary: generated.summary,
     version: 1,
-    workouts: generated.workouts.map((workout, workoutIndex) => ({
-      ...workout,
-      id: `${planId}-workout-${workoutIndex + 1}`,
-      exercises: workout.exercises.map((exercise, exerciseIndex) => ({
-        ...exercise,
-        id: `${planId}-workout-${workoutIndex + 1}-exercise-${exerciseIndex + 1}`,
-      })),
-    })),
+    workouts: generated.workouts.map((workout, workoutIndex) => {
+      const workoutId = `${planId}-workout-${workoutIndex + 1}`
+
+      return {
+        ...workout,
+        id: workoutId,
+        previousWorkoutId: workoutIndex === 0
+          ? null
+          : `${planId}-workout-${workoutIndex}`,
+        exercises: workout.exercises.map((exercise, exerciseIndex) => ({
+          ...exercise,
+          id: `${workoutId}-exercise-${exerciseIndex + 1}`,
+        })),
+      }
+    }),
     change_log: [`Created plan for goal: ${input.goal}`],
   })
   const { data, error } = await getSupabaseServerClient(event)

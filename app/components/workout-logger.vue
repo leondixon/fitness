@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatWorkoutPendingDays } from '~/utils/workout-schedule'
+
 interface WorkoutLoggerSet {
   previous?: string
   warmup?: boolean
@@ -23,6 +25,7 @@ interface WorkoutLoggerWorkout {
 
 const props = withDefaults(
   defineProps<{
+    pendingDays?: number
     workout?: WorkoutLoggerWorkout
   }>(),
   {
@@ -141,10 +144,10 @@ function estimatedExerciseTime(exercise: WorkoutLoggerExercise) {
         </div>
         <div class="rounded-xl bg-white/10 px-2 py-1.5 ring-1 ring-white/10">
           <p class="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-slate-400">
-            Date
+            Schedule
           </p>
           <p class="truncate text-sm font-bold leading-tight">
-            {{ workout.date ?? '—' }}
+            {{ formatWorkoutPendingDays(pendingDays) }}
           </p>
         </div>
       </div>

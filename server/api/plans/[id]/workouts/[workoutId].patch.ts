@@ -40,7 +40,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 502, statusMessage: 'LLM returned an invalid workout response.' })
   }
 
-  const editedWorkout = workoutSchema.parse({ ...(response as { workout?: unknown }).workout, id: workout.id ?? workoutId })
+  const editedWorkout = workoutSchema.parse({
+    ...(response as { workout?: unknown }).workout,
+    id: workout.id ?? workoutId,
+    previousWorkoutId: workout.previousWorkoutId,
+    restDaysAfterPrevious: workout.restDaysAfterPrevious,
+  })
   const workouts = plan.workouts.map((item, index) => index === workoutIndex ? editedWorkout : item)
   const { data, error } = await getSupabaseServerClient(event)
     .from('workout_plans')

@@ -82,8 +82,19 @@ it.skipIf(!process.env.DEEPSEEK_API_KEY)(
       expect(plan.workouts.length).toBeGreaterThan(0)
       expect(plan.changeLog).toContain(`Created plan for goal: ${goal}`)
 
-      for (const workout of plan.workouts) {
+      let scheduledDay = 0
+      const scheduledWeeks = new Set([1])
+
+      for (const [workoutIndex, workout] of plan.workouts.entries()) {
         expect(String(workout.id).trim()).toBeTruthy()
+        expect(workout.previousWorkoutId).toBe(
+          workoutIndex === 0 ? null : plan.workouts[workoutIndex - 1]?.id,
+        )
+        expect(workout.restDaysAfterPrevious).toBeGreaterThanOrEqual(0)
+        if (workoutIndex > 0) {
+          scheduledDay += (workout.restDaysAfterPrevious ?? 0) + 1
+          scheduledWeeks.add(Math.floor(scheduledDay / 7) + 1)
+        }
         expect(workout.title.trim()).toBeTruthy()
         expect(workout.exercises.length).toBeGreaterThan(0)
 
@@ -93,6 +104,9 @@ it.skipIf(!process.env.DEEPSEEK_API_KEY)(
           expect(exercise.sets.length).toBeGreaterThan(0)
         }
       }
+
+      expect(scheduledDay).toBeLessThanOrEqual(83)
+      expect(scheduledWeeks).toEqual(new Set(Array.from({ length: 12 }, (_, index) => index + 1)))
     })
   },
   120_000,

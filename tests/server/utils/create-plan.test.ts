@@ -12,13 +12,14 @@ beforeAll(() => {
 const validPlan = {
   title: 'Strength plan',
   summary: 'A balanced strength plan.',
-  workouts: [{
-    title: 'Workout A',
+  workouts: Array.from({ length: 12 }, (_, index) => ({
+    restDaysAfterPrevious: index === 0 ? 0 : 6,
+    title: `Workout ${index + 1}`,
     exercises: [{
       name: 'Squat',
       sets: [{ reps: '5', weight: 'heavy' }],
     }],
-  }],
+  })),
 }
 
 function mockClient(responses: unknown[]) {

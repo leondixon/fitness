@@ -41,7 +41,14 @@ async function endPlan() {
       <p v-else-if="endPlanError" class="rounded-2xl bg-white p-4 text-sm font-semibold text-red-700">
         {{ endPlanError }}
       </p>
-      <workout-plan v-if="plan" :ending-plan="endingPlan" :workouts="plan.workouts" @end-plan="endPlan" @select="openWorkout" />
+      <workout-plan
+        v-if="plan"
+        :created-at="plan.createdAt"
+        :ending-plan="endingPlan"
+        :workouts="plan.workouts"
+        @end-plan="endPlan"
+        @select="openWorkout"
+      />
       <p v-else class="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-600">
         There isn't a current workout plan yet.
       </p>
