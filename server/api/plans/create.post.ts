@@ -1,5 +1,6 @@
-import { createPlanLlmResponseSchema, createPlanRequestSchema, createPlanResponseSchema } from '~~/server/schema/createPlan'
+import { createPlanRequestSchema, createPlanResponseSchema } from '~~/server/schema/create-plan'
 import { mapWorkoutPlanRow, persistedPlanInsertSchema } from '~~/server/schema/persistedPlan'
+import { generatePlan } from '~~/server/utils/create-plan'
 import { getDeepSeekClient } from '~~/server/utils/deepseek'
 import { getCurrentPlan } from '~~/server/utils/plans'
 import { getSupabaseServerClient, requireUser } from '~~/server/utils/supabase'
@@ -14,55 +15,26 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  const completion = await getDeepSeekClient().chat.completions.create({
-    model: config.deepseekModel || 'deepseek-v4-flash',
-    response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'system',
-        content: `You generate useful workout plans as a practical strength and conditioning coach. Return only valid JSON matching this exact shape, with no markdown or extra text:
-{
-  "title": "string", "summary": "string", "workouts": [{ "title": "string", "subtitle": "string", "date": "string", "focus": "string", "notes": "string", "exercises": [{ "name": "string", "restSeconds": 120, "workSetSeconds": 45, "sets": [{ "reps": "8-10", "weight": "moderate", "previous": "optional string", "warmup": false }] }] }]
-}
-Do not include plan metadata. The workouts array, each workout's exercises array, and each exercise's sets array must be non-empty.`,
-      },
-      { role: 'user', content: JSON.stringify({ goal: input.goal }) },
-    ],
-  })
-  const content = completion.choices[0]?.message.content
-
-  if (!content) {
-    throw createError({ statusCode: 502, statusMessage: 'LLM returned an empty response.' })
-  }
-
-  let llmResponse: unknown
-  try {
-    llmResponse = JSON.parse(content)
-  }
-  catch {
-    throw createError({ statusCode: 502, statusMessage: 'LLM returned an invalid plan response.' })
-  }
-
-  const generated = createPlanLlmResponseSchema.safeParse(llmResponse)
-  if (!generated.success) {
-    console.error(generated.error)
-    throw createError({ statusCode: 502, statusMessage: 'LLM returned an invalid plan response.' })
-  }
+  const generated = await generatePlan(
+    getDeepSeekClient(),
+    config.deepseekModel || 'deepseek-v4-flash',
+    input.goal,
+  )
 
   const planId = crypto.randomUUID()
   const insert = persistedPlanInsertSchema.parse({
     id: planId,
     user_id: user.id,
     goal: input.goal,
-    title: generated.data.title,
-    summary: generated.data.summary,
+    title: generated.title,
+    summary: generated.summary,
     version: 1,
-    workouts: generated.data.workouts.map((workout, workoutIndex) => ({
+    workouts: generated.workouts.map((workout, workoutIndex) => ({
       ...workout,
-      id: workout.id ?? `${planId}-workout-${workoutIndex + 1}`,
+      id: `${planId}-workout-${workoutIndex + 1}`,
       exercises: workout.exercises.map((exercise, exerciseIndex) => ({
         ...exercise,
-        id: exercise.id ?? `${planId}-workout-${workoutIndex + 1}-exercise-${exerciseIndex + 1}`,
+        id: `${planId}-workout-${workoutIndex + 1}-exercise-${exerciseIndex + 1}`,
       })),
     })),
     change_log: [`Created plan for goal: ${input.goal}`],
