@@ -78,7 +78,7 @@ function save() {
         class="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2 rounded-xl bg-slate-50 p-2"
       >
         <strong>{{ set.warmup ? 'W' : index + 1 }}</strong>
-        <span class="text-xs text-slate-600">{{ set.weight }} × {{ set.reps }}</span>
+        <span class="text-xs text-slate-600">{{ set.weight.replaceAll('%', '') }} × {{ set.reps }}</span>
         <template v-if="set.warmup">
           <span class="col-span-2 text-xs font-semibold text-slate-400">Warmup — not logged</span>
         </template>

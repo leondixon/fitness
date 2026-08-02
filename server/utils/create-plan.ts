@@ -10,8 +10,8 @@ const requiredSchema = JSON.stringify(createPlanLlmResponseJsonSchema)
 
 const systemPrompt = `You generate useful workout plans as a practical strength and conditioning coach.
 Create exactly three ordered workout templates tailored to the user's request. These templates repeat forever in the given order, so do not add dates, weekdays, weeks, or scheduling fields.
-Use numeric-looking prescriptions as strings for reps and weight, and explicitly identify warmup sets.
 The user payload may include bodyNotes with injuries, imbalances, or other physical context. Use them to steer exercise selection and programming.
+Use numeric-looking prescriptions as strings for reps and weight. For an exercise with no matching exercise history, set every weight to "N/A". Only use bare kilogram values, with no units or percentage sign, when matching history is provided. Explicitly identify warmup sets.
 Return only valid JSON matching this JSON Schema, with no markdown or extra text:
 ${requiredSchema}`
 
@@ -29,6 +29,22 @@ function parseResponse(content: string | null | undefined) {
   }
 
   return createPlanLlmResponseSchema.safeParse(response)
+}
+
+function applyEvidenceBasedWeights(plan: CreatePlanLlmResponse, exerciseHistory: ExerciseHistory[]) {
+  const exercisesWithHistory = new Set(exerciseHistory.map(({ exercise }) => exercise.trim().toLocaleLowerCase().replace(/\s+/g, ' ')))
+
+  return {
+    ...plan,
+    workouts: plan.workouts.map(workout => ({
+      ...workout,
+      exercises: workout.exercises.map(exercise =>
+        exercisesWithHistory.has(exercise.name.trim().toLocaleLowerCase().replace(/\s+/g, ' '))
+          ? exercise
+          : { ...exercise, sets: exercise.sets.map(set => ({ ...set, weight: 'N/A' })) },
+      ),
+    })),
+  }
 }
 
 export async function generatePlan(
@@ -50,14 +66,14 @@ export async function generatePlan(
   const generated = parseResponse(completion.choices[0]?.message.content)
 
   if (generated.success) {
-    return generated.data
+    return applyEvidenceBasedWeights(generated.data, exerciseHistory)
   }
 
   const validationIssues = generated.error.issues.map(issue => ({
     path: issue.path.join('.'),
     message: issue.message,
   }))
-  console.error('DeepSeek plan validation failed', validationIssues)
+  console.warn('DeepSeek plan response needs correction', validationIssues)
   const correction = await client.chat.completions.create({
     model,
     response_format: { type: 'json_object' },
@@ -90,7 +106,7 @@ ${requiredSchema}`,
     throw createError({ statusCode: 502, statusMessage: 'LLM returned an invalid plan response.' })
   }
 
-  return corrected.data
+  return applyEvidenceBasedWeights(corrected.data, exerciseHistory)
 }
 
 export interface ExerciseHistory {

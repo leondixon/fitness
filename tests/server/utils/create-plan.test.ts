@@ -45,6 +45,15 @@ it('requests only three repeating templates and sends history aggregates and bod
 
 it('succeeds after correcting an invalid response', async () => {
   const { client, requests } = mockClient([{ ...validPlan, workouts: [] }, validPlan])
-  expect(await generatePlan(client, 'deepseek-test', 'Get stronger')).toEqual(validPlan)
+  expect(await generatePlan(client, 'deepseek-test', 'Get stronger')).toEqual({
+    ...validPlan,
+    workouts: validPlan.workouts.map(workout => ({
+      ...workout,
+      exercises: workout.exercises.map(exercise => ({
+        ...exercise,
+        sets: exercise.sets.map(set => ({ ...set, weight: 'N/A' })),
+      })),
+    })),
+  })
   expect(requests).toHaveLength(2)
 })

@@ -30,7 +30,30 @@ export async function getCurrentPlan(event: H3Event, userId: string) {
   if (error)
     throw createError({ statusCode: 500, statusMessage: 'Could not load the workout routine.' })
 
-  return data ? mapRoutineRow(data) : null
+  if (!data)
+    return null
+
+  const plan = mapRoutineRow(data)
+  const exercisesWithHistory = new Set(
+    (await getExerciseHistory(event, userId)).map(({ exercise }) => normalizeExerciseName(exercise)),
+  )
+  const workouts = plan.workouts.map(workout => ({
+    ...workout,
+    exercises: workout.exercises.map(exercise =>
+      exercisesWithHistory.has(normalizeExerciseName(exercise.name))
+        ? exercise
+        : { ...exercise, sets: exercise.sets.map(set => ({ ...set, weight: 'N/A' })) },
+    ),
+  }))
+
+  return {
+    ...plan,
+    workouts,
+    upcoming: plan.upcoming.map(upcoming => ({
+      ...upcoming,
+      workout: workouts.find(workout => workout.id === upcoming.workout.id)!,
+    })),
+  }
 }
 
 export async function getExerciseHistory(event: H3Event, userId: string) {
