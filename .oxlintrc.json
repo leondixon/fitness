@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Antfu-equivalent rules for Vue/TS (generated from @antfu/eslint-config).
+  // Scoped package names aren't supported in extends yet:
+  // https://github.com/oxc-project/oxc/issues/15538
+  "extends": ["./node_modules/@lumirelle/oxlint-config/.oxlintrc.vue.json"],
+  "options": {
+    "typeAware": true
+  },
+  "env": {
+    "builtin": true,
+    "es2026": true,
+    "browser": true,
+    "node": true
+  },
+  "rules": {
+    "unicorn/no-null": "error"
+  }
+}
