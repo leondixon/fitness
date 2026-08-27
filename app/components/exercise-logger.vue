@@ -83,8 +83,8 @@ function collapseOnLeave(event: FocusEvent) {
     collapsed.value = true
 }
 
-function expand() {
-  collapsed.value = false
+function toggle() {
+  collapsed.value = !collapsed.value
 }
 
 function targetFor(set: Exercise['sets'][number]) {
@@ -96,7 +96,11 @@ function targetFor(set: Exercise['sets'][number]) {
 }
 
 function summary() {
-  return loggedSets.value.map(set => `${set.kg}×${set.reps}`).join(' · ')
+  const logged = loggedSets.value.map(set => `${set.kg}×${set.reps}`).join(' · ')
+  if (logged)
+    return logged
+  const count = workingSets.value.length
+  return `${count} ${count === 1 ? 'set' : 'sets'}`
 }
 
 function setLabel(set: Exercise['sets'][number]) {
@@ -109,53 +113,48 @@ function setLabel(set: Exercise['sets'][number]) {
 <template>
   <section class="border-t border-rule py-4" @focusout="collapseOnLeave">
     <button
-      v-if="collapsed"
       class="flex w-full items-baseline justify-between gap-4 py-1 text-left"
       type="button"
-      @click="expand"
+      @click="toggle"
     >
-      <span>{{ exercise.name }}</span>
-      <span class="text-[14px] text-mute">{{ summary() }}</span>
-    </button>
-
-    <template v-else>
       <h2 class="text-[17px]">
         {{ exercise.name }}
       </h2>
+      <span v-if="collapsed" class="text-[14px] text-mute">{{ summary() }}</span>
+    </button>
 
-      <div class="mt-3 grid gap-2">
-        <div class="grid grid-cols-[36px_1fr_1fr_1fr] gap-2 text-[12px] text-mute">
-          <span>Set</span><span>Target</span><span>kg</span><span>Reps</span>
-        </div>
-        <div
-          v-for="set in exercise.sets"
-          :key="set.id"
-          class="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2 py-1.5"
-        >
-          <span>{{ setLabel(set) }}</span>
-          <span class="text-[14px] text-mute">{{ targetFor(set) }}</span>
-          <template v-if="set.warmup">
-            <span class="col-span-2 text-[14px] text-mute">warmup</span>
-          </template>
-          <template v-else>
-            <input
-              v-model="values[set.position]!.kg"
-              class="field-line"
-              min="0"
-              inputmode="decimal"
-              type="number"
-            >
-            <input
-              v-model="values[set.position]!.reps"
-              class="field-line"
-              min="0"
-              step="1"
-              inputmode="numeric"
-              type="number"
-            >
-          </template>
-        </div>
+    <div v-if="!collapsed" class="mt-3 grid gap-2">
+      <div class="grid grid-cols-[36px_1fr_1fr_1fr] gap-2 text-[12px] text-mute">
+        <span>Set</span><span>Target</span><span>kg</span><span>Reps</span>
       </div>
-    </template>
+      <div
+        v-for="set in exercise.sets"
+        :key="set.id"
+        class="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2 py-1.5"
+      >
+        <span>{{ setLabel(set) }}</span>
+        <span class="text-[14px] text-mute">{{ targetFor(set) }}</span>
+        <template v-if="set.warmup">
+          <span class="col-span-2 text-[14px] text-mute">warmup</span>
+        </template>
+        <template v-else>
+          <input
+            v-model="values[set.position]!.kg"
+            class="field-line"
+            min="0"
+            inputmode="decimal"
+            type="number"
+          >
+          <input
+            v-model="values[set.position]!.reps"
+            class="field-line"
+            min="0"
+            step="1"
+            inputmode="numeric"
+            type="number"
+          >
+        </template>
+      </div>
+    </div>
   </section>
 </template>
