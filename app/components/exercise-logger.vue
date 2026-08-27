@@ -96,67 +96,58 @@ function targetFor(set: Exercise['sets'][number]) {
 }
 
 function summary() {
-  return loggedSets.value.map(set => `${set.kg} × ${set.reps}`).join(' · ')
+  return loggedSets.value.map(set => `${set.kg}×${set.reps}`).join(' · ')
+}
+
+function setLabel(set: Exercise['sets'][number]) {
+  if (set.warmup)
+    return 'W'
+  return String(workingSets.value.findIndex(item => item.position === set.position) + 1)
 }
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" @focusout="collapseOnLeave">
+  <section class="border-t border-rule py-4" @focusout="collapseOnLeave">
     <button
       v-if="collapsed"
-      class="flex w-full items-center justify-between gap-3 text-left"
+      class="flex w-full items-baseline justify-between gap-4 py-1 text-left"
       type="button"
       @click="expand"
     >
-      <div>
-        <p class="text-[0.65rem] font-bold uppercase tracking-wider text-emerald-700">
-          Logged
-        </p>
-        <h2 class="text-xl font-bold text-slate-900">
-          {{ exercise.name }}
-        </h2>
-        <p class="mt-1 text-sm font-semibold text-slate-600">
-          {{ summary() }}
-        </p>
-      </div>
-      <span class="text-xs font-bold text-emerald-700">Edit</span>
+      <span>{{ exercise.name }}</span>
+      <span class="text-[14px] text-mute">{{ summary() }}</span>
     </button>
 
     <template v-else>
-      <div>
-        <p class="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">
-          Exercise
-        </p>
-        <h2 class="text-xl font-bold text-slate-900">
-          {{ exercise.name }}
-        </h2>
-      </div>
+      <h2 class="text-[17px]">
+        {{ exercise.name }}
+      </h2>
 
       <div class="mt-3 grid gap-2">
-        <div class="grid grid-cols-[36px_1fr_1fr_1fr] gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+        <div class="grid grid-cols-[36px_1fr_1fr_1fr] gap-2 text-[12px] text-mute">
           <span>Set</span><span>Target</span><span>kg</span><span>Reps</span>
         </div>
         <div
-          v-for="(set, index) in exercise.sets"
+          v-for="set in exercise.sets"
           :key="set.id"
-          class="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2 rounded-xl bg-slate-50 p-2"
+          class="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2 py-1.5"
         >
-          <strong>{{ set.warmup ? 'W' : index + 1 }}</strong>
-          <span class="text-xs text-slate-600">{{ targetFor(set) }}</span>
+          <span>{{ setLabel(set) }}</span>
+          <span class="text-[14px] text-mute">{{ targetFor(set) }}</span>
           <template v-if="set.warmup">
-            <span class="col-span-2 text-xs font-semibold text-slate-400">Warmup — not logged</span>
+            <span class="col-span-2 text-[14px] text-mute">warmup</span>
           </template>
           <template v-else>
             <input
               v-model="values[set.position]!.kg"
-              class="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5"
+              class="field-line"
               min="0"
               inputmode="decimal"
               type="number"
             >
             <input
               v-model="values[set.position]!.reps"
-              class="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5"
+              class="field-line"
               min="0"
               step="1"
               inputmode="numeric"

@@ -110,31 +110,30 @@ async function finish() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-100 p-3">
-    <div class="mx-auto grid w-full max-w-[860px] gap-3">
-      <NuxtLink class="w-fit rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm" to="/workouts">
-        ← Back to routine
-      </NuxtLink>
-      <p v-if="requestError" class="rounded-xl bg-white p-3 text-sm font-semibold text-red-700">
-        {{ requestError }}
+  <main class="page">
+    <NuxtLink class="link-mute w-fit no-underline" to="/workouts">
+      Back
+    </NuxtLink>
+    <p v-if="requestError" class="mt-6 text-[15px] text-red-700">
+      {{ requestError }}
+    </p>
+    <section v-if="!isNextWorkout || !nextWorkout" class="mt-10">
+      <h1 class="text-[1.75rem] leading-none tracking-tight">
+        Preview workouts cannot be started
+      </h1>
+      <p class="mt-3 text-[15px] text-mute">
+        Finish the current workout to advance the rotation.
       </p>
-      <section v-if="!isNextWorkout || !nextWorkout" class="rounded-2xl bg-white p-4">
-        <h1 class="text-xl font-extrabold">
-          Preview workouts cannot be started
-        </h1>
-        <p class="mt-1 text-sm text-slate-500">
-          Finish the current workout to advance the rotation.
-        </p>
-      </section>
-      <workout-logger
-        v-else-if="session"
-        :finishing="finishing"
-        :session="session"
-        :workout="nextWorkout"
-        @finish="finish"
-        @save="saveExercise"
-        @undo="undoExercise"
-      />
-    </div>
+    </section>
+    <workout-logger
+      v-else-if="session"
+      class="mt-8"
+      :finishing="finishing"
+      :session="session"
+      :workout="nextWorkout"
+      @finish="finish"
+      @save="saveExercise"
+      @undo="undoExercise"
+    />
   </main>
 </template>
