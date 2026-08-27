@@ -41,6 +41,14 @@ export const finishSessionParamsSchema = z.strictObject({
   id: z.string().uuid(),
 })
 
+export const finishSessionRequestSchema = z.strictObject({
+  results: z.array(saveExerciseResultRequestSchema),
+})
+
+export const sessionDraftSchema = z.strictObject({
+  results: z.array(exerciseResultSchema),
+})
+
 export const finishSessionResponseSchema = z.strictObject({
   session: workoutSessionSchema,
   advanced: z.boolean(),

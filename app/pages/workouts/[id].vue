@@ -1,70 +1,103 @@
 <script setup lang="ts">
 import type { z } from 'zod'
-import type { workoutSessionSchema } from '~~/server/schema/session'
 import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
+import { sessionDraftSchema, workoutSessionSchema } from '~~/server/schema/session'
 
 type WorkoutSession = z.infer<typeof workoutSessionSchema>
 
 definePageMeta({ middleware: 'require-plan' })
 
+function draftKey(sessionId: string) {
+  return `fitness-session-draft:${sessionId}`
+}
+
+function readDraft(sessionId: string) {
+  if (!import.meta.client)
+    return undefined
+  const raw = localStorage.getItem(draftKey(sessionId))
+  if (!raw)
+    return undefined
+  try {
+    const parsed = sessionDraftSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? parsed.data.results : undefined
+  }
+  catch {
+    return undefined
+  }
+}
+
+function writeDraft(sessionId: string, results: WorkoutSession['results']) {
+  if (!import.meta.client)
+    return
+  localStorage.setItem(draftKey(sessionId), JSON.stringify({ results }))
+}
+
+function clearDraft(sessionId: string) {
+  if (!import.meta.client)
+    return
+  localStorage.removeItem(draftKey(sessionId))
+}
+
 const route = useRoute()
-const { data: planData } = await useFetch('/api/plans/current')
+const { data: planData, refresh } = await useFetch('/api/plans/current', {
+  getCachedData: () => undefined,
+})
+await refresh()
 const plan = computed(() => planData.value?.plan as WorkoutPlan | null | undefined)
 const nextWorkout = computed(() => plan.value?.upcoming[0]?.workout)
-const isNextWorkout = computed(() => nextWorkout.value?.id === route.params.id)
+const isNextWorkout = computed(() => nextWorkout.value?.id === String(route.params.id ?? ''))
 const session = ref<WorkoutSession>()
-const savingExerciseId = ref('')
 const finishing = ref(false)
 const requestError = ref('')
 
 if (isNextWorkout.value) {
   const response = await $fetch('/api/sessions/current', { method: 'POST' })
-  session.value = response.session
-}
-
-async function saveExercise(exerciseId: string, sets: { position: number, kg: number, reps: number }[]) {
-  if (!session.value)
-    return
-  savingExerciseId.value = exerciseId
-  requestError.value = ''
-  try {
-    const response = await $fetch(`/api/sessions/${session.value.id}/exercises`, {
-      method: 'PUT',
-      body: { exerciseId, sets },
-    })
-    session.value = response.session
-  }
-  catch (error) {
-    requestError.value = error instanceof Error ? error.message : 'Could not save this exercise.'
-  }
-  finally {
-    savingExerciseId.value = ''
+  const draft = readDraft(response.session.id)
+  session.value = {
+    ...response.session,
+    results: draft ?? response.session.results,
   }
 }
 
-async function undoExercise(exerciseId: string) {
-  if (!session.value)
+function saveExercise(exerciseId: string, sets: WorkoutSession['results'][number]['sets']) {
+  const current = session.value
+  const exercise = nextWorkout.value?.exercises.find(item => item.id === exerciseId)
+  if (!current || !exercise)
     return
-  savingExerciseId.value = exerciseId
-  try {
-    const response = await $fetch(`/api/sessions/${session.value.id}/exercises`, {
-      method: 'DELETE',
-      body: { exerciseId },
-    })
-    session.value = response.session
-  }
-  finally {
-    savingExerciseId.value = ''
-  }
+  const results = [
+    ...current.results.filter(result => result.exerciseId !== exerciseId),
+    { exerciseId, exerciseName: exercise.name, completed: true, sets },
+  ]
+  session.value = { ...current, results }
+  writeDraft(current.id, results)
+}
+
+function undoExercise(exerciseId: string) {
+  const current = session.value
+  if (!current)
+    return
+  const results = current.results.filter(result => result.exerciseId !== exerciseId)
+  session.value = { ...current, results }
+  writeDraft(current.id, results)
 }
 
 async function finish() {
-  if (!session.value || finishing.value)
+  const current = session.value
+  if (!current || finishing.value)
     return
   finishing.value = true
   requestError.value = ''
   try {
-    await $fetch(`/api/sessions/${session.value.id}/finish`, { method: 'POST' })
+    await $fetch(`/api/sessions/${current.id}/finish`, {
+      method: 'POST',
+      body: {
+        results: current.results.map(result => ({
+          exerciseId: result.exerciseId,
+          sets: result.sets,
+        })),
+      },
+    })
+    clearDraft(current.id)
     await navigateTo('/workouts')
   }
   catch (error) {
@@ -96,7 +129,6 @@ async function finish() {
       <workout-logger
         v-else-if="session"
         :finishing="finishing"
-        :saving-exercise-id="savingExerciseId"
         :session="session"
         :workout="nextWorkout"
         @finish="finish"

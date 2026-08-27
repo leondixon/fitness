@@ -1,7 +1,11 @@
 import type { H3Event } from 'h3'
+import type { z } from 'zod'
 
 import { mapRoutineRow } from '~~/server/schema/persistedPlan'
+import { loggedSetSchema } from '~~/server/schema/session'
 import { getSupabaseServerClient } from './supabase'
+
+type LoggedSet = z.infer<typeof loggedSetSchema>
 
 const routineQuery = `
   id,user_id,request,title,summary,version,status,created_at,
@@ -34,16 +38,23 @@ export async function getCurrentPlan(event: H3Event, userId: string) {
     return null
 
   const plan = mapRoutineRow(data)
+  const rows = await loadCompletedExerciseResults(event, userId)
   const exercisesWithHistory = new Set(
-    (await getExerciseHistory(event, userId)).map(({ exercise }) => normalizeExerciseName(exercise)),
+    aggregateExerciseHistory(rows).map(({ exercise }) => normalizeExerciseName(exercise)),
   )
+  const lastSetsByExerciseId = lastLoggedSetsByExerciseId(rows)
   const workouts = plan.workouts.map(workout => ({
     ...workout,
-    exercises: workout.exercises.map(exercise =>
-      exercisesWithHistory.has(normalizeExerciseName(exercise.name))
-        ? exercise
-        : { ...exercise, sets: exercise.sets.map(set => ({ ...set, weight: 'N/A' })) },
-    ),
+    exercises: workout.exercises.map((exercise) => {
+      const lastSets = lastSetsByExerciseId.get(exercise.id)
+      return {
+        ...exercise,
+        sets: exercisesWithHistory.has(normalizeExerciseName(exercise.name))
+          ? exercise.sets
+          : exercise.sets.map(set => ({ ...set, weight: 'N/A' })),
+        ...(lastSets ? { lastSets } : {}),
+      }
+    }),
   }))
 
   return {
@@ -57,9 +68,13 @@ export async function getCurrentPlan(event: H3Event, userId: string) {
 }
 
 export async function getExerciseHistory(event: H3Event, userId: string) {
+  return aggregateExerciseHistory(await loadCompletedExerciseResults(event, userId))
+}
+
+async function loadCompletedExerciseResults(event: H3Event, userId: string) {
   const { data, error } = await getSupabaseServerClient(event)
     .from('exercise_results')
-    .select('normalized_name,exercise_name,sets,workout_sessions!inner(completed_at,status,user_id)')
+    .select('exercise_id,normalized_name,exercise_name,sets,workout_sessions!inner(completed_at,status,user_id)')
     .eq('completed', true)
     .eq('workout_sessions.status', 'completed')
     .eq('workout_sessions.user_id', userId)
@@ -68,14 +83,46 @@ export async function getExerciseHistory(event: H3Event, userId: string) {
   if (error)
     throw createError({ statusCode: 500, statusMessage: 'Could not load exercise history.' })
 
-  return aggregateExerciseHistory(data ?? [])
+  return data ?? []
 }
 
-interface HistoricalResult {
+export type HistoricalResult = {
+  exercise_id?: string
   normalized_name: string
   exercise_name: string
   sets: unknown
-  workout_sessions?: { completed_at?: string | null } | { completed_at?: string | null }[]
+  workout_sessions?: { completed_at?: string | undefined } | { completed_at?: string | undefined }[]
+}
+
+function parseLoggedSets(sets: unknown): LoggedSet[] {
+  if (!Array.isArray(sets))
+    return []
+
+  return sets.flatMap((set, index) => {
+    if (!set || typeof set !== 'object')
+      return []
+    const { position, kg, reps } = set as { position?: unknown, kg?: unknown, reps?: unknown }
+    const setPosition = typeof position === 'number' && Number.isInteger(position) && position >= 0
+      ? position
+      : index
+    return typeof kg === 'number' && Number.isFinite(kg)
+      && typeof reps === 'number' && Number.isFinite(reps)
+      ? [{ position: setPosition, kg, reps }]
+      : []
+  })
+}
+
+export function lastLoggedSetsByExerciseId(rows: HistoricalResult[]) {
+  const last = new Map<string, LoggedSet[]>()
+  for (const row of rows) {
+    if (!row.exercise_id || last.has(row.exercise_id))
+      continue
+    const sets = parseLoggedSets(row.sets)
+    if (sets.length === 0)
+      continue
+    last.set(row.exercise_id, sets)
+  }
+  return last
 }
 
 export function aggregateExerciseHistory(rows: HistoricalResult[]) {
@@ -83,17 +130,7 @@ export function aggregateExerciseHistory(rows: HistoricalResult[]) {
 
   for (const row of rows) {
     const normalizedName = normalizeExerciseName(row.normalized_name)
-    const sets = Array.isArray(row.sets)
-      ? row.sets.flatMap((set) => {
-          if (!set || typeof set !== 'object')
-            return []
-          const { kg, reps } = set as { kg?: unknown, reps?: unknown }
-          return typeof kg === 'number' && Number.isFinite(kg)
-            && typeof reps === 'number' && Number.isFinite(reps)
-            ? [{ kg, reps }]
-            : []
-        })
-      : []
+    const sets = parseLoggedSets(row.sets)
     if (sets.length === 0)
       continue
 

@@ -8,7 +8,6 @@ type WorkoutSession = z.infer<typeof workoutSessionSchema>
 const props = defineProps<{
   workout: Workout
   session: WorkoutSession
-  savingExerciseId?: string
   finishing?: boolean
 }>()
 
@@ -42,8 +41,7 @@ function resultFor(exerciseId: string) {
       :key="exercise.id"
       :completed="resultFor(exercise.id)?.completed"
       :exercise="exercise"
-      :initial-sets="resultFor(exercise.id)?.sets"
-      :saving="savingExerciseId === exercise.id"
+      :initial-sets="resultFor(exercise.id)?.sets ?? exercise.lastSets"
       @done="emit('save', exercise.id, $event)"
       @undo="emit('undo', exercise.id)"
     />
@@ -52,7 +50,7 @@ function resultFor(exerciseId: string) {
       {{ finishing ? 'Finishing…' : 'Finish workout' }}
     </button>
     <p class="text-center text-xs text-slate-500">
-      You can finish with any number of exercises logged.
+      Leave an exercise after filling every set to collapse it. Finish workout logs what you entered.
     </p>
   </section>
 </template>

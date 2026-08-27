@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 
 import { mapRoutineRow } from '../../../server/schema/persistedPlan'
-import { aggregateExerciseHistory, normalizeExerciseName } from '../../../server/utils/plans'
+import { aggregateExerciseHistory, lastLoggedSetsByExerciseId, normalizeExerciseName } from '../../../server/utils/plans'
 
 function routineRow(nextWorkoutPosition: number) {
   return {
@@ -48,6 +48,24 @@ it.each([
   const plan = mapRoutineRow(routineRow(position))
   expect(plan.upcoming.map(item => item.workout.title)).toEqual(titles)
   expect(plan.upcoming.map(item => item.loggable)).toEqual([true, false, false, false, false])
+})
+
+it('keeps the most recent logged sets for each prescribed exercise', () => {
+  const last = lastLoggedSetsByExerciseId([
+    {
+      exercise_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      normalized_name: 'squat',
+      exercise_name: 'Squat',
+      sets: [{ position: 1, kg: 90, reps: 5 }],
+    },
+    {
+      exercise_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      normalized_name: 'squat',
+      exercise_name: 'Squat',
+      sets: [{ position: 1, kg: 70, reps: 8 }],
+    },
+  ])
+  expect(last.get('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')).toEqual([{ position: 1, kg: 90, reps: 5 }])
 })
 
 it('normalizes names and averages only the last three nonblank appearances', () => {

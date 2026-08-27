@@ -1,7 +1,9 @@
 export default defineNuxtRouteMiddleware(async () => {
-  const { error } = await useFetch('/api/plans/current')
-
-  if (error.value?.statusCode === 401) {
-    return navigateTo('/')
+  try {
+    await $fetch('/api/plans/current')
+  }
+  catch (error) {
+    if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 401)
+      return navigateTo('/')
   }
 })

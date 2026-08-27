@@ -3,7 +3,9 @@ import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
 
 definePageMeta({ middleware: 'require-plan' })
 
-const { data, error } = await useFetch('/api/plans/current')
+const { data, error } = await useFetch('/api/plans/current', {
+  getCachedData: () => undefined,
+})
 const plan = computed(() => data.value?.plan as WorkoutPlan | null | undefined)
 const adjustment = ref('')
 const adjusting = ref(false)
