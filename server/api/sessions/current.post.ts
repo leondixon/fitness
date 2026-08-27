@@ -1,7 +1,10 @@
 import { sessionResponseSchema } from '~~/server/schema/session'
 import { getCurrentPlan } from '~~/server/utils/plans'
+import { ensureWorkoutLoads, waitUpTo } from '~~/server/utils/prescribe'
 import { mapSessionRow, sessionColumns } from '~~/server/utils/sessions'
 import { getSupabaseServerClient, requireUser } from '~~/server/utils/supabase'
+
+const startPrescribeWaitMs = 5000
 
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
@@ -48,6 +51,8 @@ export default defineEventHandler(async (event) => {
   }
   if (error || !data)
     throw createError({ statusCode: 500, statusMessage: 'Could not start the workout session.' })
+
+  await waitUpTo(ensureWorkoutLoads(event, user.id, workout.id), startPrescribeWaitMs)
 
   return sessionResponseSchema.parse({ session: mapSessionRow(data) })
 })

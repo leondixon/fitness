@@ -51,7 +51,8 @@ const finishing = ref(false)
 const requestError = ref('')
 
 if (isNextWorkout.value) {
-  const response = await $fetch('/api/sessions/current', { method: 'POST' })
+  const response = await $fetch('/api/sessions/current', { method: 'POST', timeout: 12_000 })
+  await refresh()
   const draft = readDraft(response.session.id)
   session.value = {
     ...response.session,
@@ -81,21 +82,22 @@ function undoExercise(exerciseId: string) {
   writeDraft(current.id, results)
 }
 
-async function finish() {
+async function finish(results: { exerciseId: string, sets: WorkoutSession['results'][number]['sets'] }[]) {
   const current = session.value
   if (!current || finishing.value)
     return
   finishing.value = true
   requestError.value = ''
+  const logged = results.length > 0
+    ? results
+    : current.results.map(result => ({
+        exerciseId: result.exerciseId,
+        sets: result.sets,
+      }))
   try {
     await $fetch(`/api/sessions/${current.id}/finish`, {
       method: 'POST',
-      body: {
-        results: current.results.map(result => ({
-          exerciseId: result.exerciseId,
-          sets: result.sets,
-        })),
-      },
+      body: { results: logged },
     })
     clearDraft(current.id)
     await navigateTo('/workouts')

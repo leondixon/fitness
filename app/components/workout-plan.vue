@@ -2,7 +2,7 @@
 import type { Workout } from '~~/server/schema/workout'
 import type { WorkoutPlan } from '~~/server/schema/workoutPlan'
 
-const props = defineProps<{ plan: WorkoutPlan }>()
+const props = defineProps<{ plan: WorkoutPlan, starting?: boolean }>()
 const emit = defineEmits<{ select: [] }>()
 
 const next = computed(() => props.plan.upcoming[0])
@@ -11,6 +11,14 @@ const later = computed(() => props.plan.upcoming.slice(1))
 function setCountLabel(exercise: Workout['exercises'][number]) {
   const count = exercise.sets.filter(set => !set.warmup).length
   return `${count} ${count === 1 ? 'set' : 'sets'}`
+}
+
+function prescriptionLabel(exercise: Workout['exercises'][number]) {
+  const work = exercise.sets.filter(set => !set.warmup)
+  if (work.length === 0)
+    return setCountLabel(exercise)
+  const targets = [...new Set(work.map(set => `${set.weight} × ${set.reps}`))]
+  return targets.length === 1 ? targets[0]! : targets.join(' · ')
 }
 </script>
 
@@ -33,7 +41,7 @@ function setCountLabel(exercise: Workout['exercises'][number]) {
         class="flex items-baseline justify-between gap-4 py-3.5"
       >
         <span>{{ exercise.name }}</span>
-        <span class="text-[14px] text-mute">{{ setCountLabel(exercise) }}</span>
+        <span class="text-[14px] text-mute">{{ prescriptionLabel(exercise) }}</span>
       </li>
     </ul>
 
@@ -46,8 +54,8 @@ function setCountLabel(exercise: Workout['exercises'][number]) {
       </p>
     </div>
 
-    <button class="btn-ink mt-10" :disabled="!next.loggable" type="button" @click="emit('select')">
-      Start
+    <button class="btn-ink mt-10" :disabled="!next.loggable || starting" type="button" @click="emit('select')">
+      {{ starting ? 'Getting your targets…' : 'Start' }}
     </button>
   </section>
 </template>

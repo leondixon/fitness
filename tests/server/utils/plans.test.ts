@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 
 import { mapRoutineRow } from '../../../server/schema/persistedPlan'
-import { aggregateExerciseHistory, lastLoggedSetsByExerciseId, normalizeExerciseName } from '../../../server/utils/plans'
+import { aggregateExerciseHistory, lastWorkingKgByExerciseName, normalizeExerciseName, prescribedKilograms, sessionHistoryByExerciseName } from '../../../server/utils/plans'
 
 function routineRow(nextWorkoutPosition: number) {
   return {
@@ -50,22 +50,42 @@ it.each([
   expect(plan.upcoming.map(item => item.loggable)).toEqual([true, false, false, false, false])
 })
 
-it('keeps the most recent logged sets for each prescribed exercise', () => {
-  const last = lastLoggedSetsByExerciseId([
+it('keeps the full session history for each exercise in chronological order', () => {
+  const history = sessionHistoryByExerciseName([
     {
-      exercise_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       normalized_name: 'squat',
       exercise_name: 'Squat',
-      sets: [{ position: 1, kg: 90, reps: 5 }],
+      sets: [{ position: 0, kg: 90, reps: 5 }],
+      workout_sessions: { completed_at: '2026-08-20T00:00:00Z' },
     },
     {
-      exercise_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       normalized_name: 'squat',
       exercise_name: 'Squat',
-      sets: [{ position: 1, kg: 70, reps: 8 }],
+      sets: [{ position: 0, kg: 70, reps: 8 }],
+      workout_sessions: { completed_at: '2026-08-01T00:00:00Z' },
+    },
+    {
+      normalized_name: 'bench press',
+      exercise_name: 'Bench press',
+      sets: [{ position: 0, kg: 40, reps: 8 }],
+      workout_sessions: { completed_at: '2026-08-10T00:00:00Z' },
     },
   ])
-  expect(last.get('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')).toEqual([{ position: 1, kg: 90, reps: 5 }])
+  expect(history).toEqual([
+    {
+      exercise: 'Squat',
+      sessions: [
+        { completedAt: '2026-08-01T00:00:00Z', sets: [{ position: 0, kg: 70, reps: 8 }] },
+        { completedAt: '2026-08-20T00:00:00Z', sets: [{ position: 0, kg: 90, reps: 5 }] },
+      ],
+    },
+    {
+      exercise: 'Bench press',
+      sessions: [
+        { completedAt: '2026-08-10T00:00:00Z', sets: [{ position: 0, kg: 40, reps: 8 }] },
+      ],
+    },
+  ])
 })
 
 it('normalizes names and averages only the last three nonblank appearances', () => {
@@ -83,4 +103,14 @@ it('normalizes names and averages only the last three nonblank appearances', () 
     averageKg: 80,
     averageReps: 6,
   }])
+})
+
+it('keeps bare kilograms and replaces percentages with last logged kg', () => {
+  expect(prescribedKilograms('62.5', 80)).toBe('62.5')
+  expect(prescribedKilograms('75%', 80)).toBe('80')
+  expect(prescribedKilograms('70%', undefined)).toBe('N/A')
+  expect(lastWorkingKgByExerciseName([
+    { normalized_name: 'squat', exercise_name: 'Squat', sets: [{ kg: 90, reps: 5 }, { kg: 70, reps: 5 }] },
+    { normalized_name: 'squat', exercise_name: 'Squat', sets: [{ kg: 40, reps: 8 }] },
+  ]).get('squat')).toBe(90)
 })

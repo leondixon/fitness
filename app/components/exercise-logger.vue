@@ -71,7 +71,16 @@ watch(isComplete, (complete, wasComplete) => {
     emit('done', loggedSets.value)
   else if (wasComplete)
     emit('undo')
-})
+}, { immediate: true })
+
+function snapshot() {
+  return {
+    exerciseId: props.exercise.id,
+    sets: loggedSets.value,
+  }
+}
+
+defineExpose({ snapshot })
 
 function collapseOnLeave(event: FocusEvent) {
   if (!(event.target instanceof HTMLInputElement))
@@ -88,18 +97,18 @@ function toggle() {
 }
 
 function targetFor(set: Exercise['sets'][number]) {
-  const logged = loggedSets.value.find(loggedSet => loggedSet.position === set.position)
-    ?? (props.initialSets ?? []).find(loggedSet => loggedSet.position === set.position)
-  if (logged)
-    return `${logged.kg} × ${logged.reps}`
-  return `${String(set.weight).replaceAll('%', '')} × ${set.reps}`
+  return `${set.weight} × ${set.reps}`
 }
 
 function summary() {
   const logged = loggedSets.value.map(set => `${set.kg}×${set.reps}`).join(' · ')
   if (logged)
     return logged
-  const count = workingSets.value.length
+  const work = workingSets.value
+  const unique = [...new Set(work.map(set => targetFor(set)))]
+  if (unique.length === 1)
+    return unique[0]!
+  const count = work.length
   return `${count} ${count === 1 ? 'set' : 'sets'}`
 }
 
@@ -141,6 +150,7 @@ function setLabel(set: Exercise['sets'][number]) {
           <input
             v-model="values[set.position]!.kg"
             class="field-line"
+            :placeholder="set.weight"
             min="0"
             inputmode="decimal"
             type="number"
@@ -148,6 +158,7 @@ function setLabel(set: Exercise['sets'][number]) {
           <input
             v-model="values[set.position]!.reps"
             class="field-line"
+            :placeholder="set.reps"
             min="0"
             step="1"
             inputmode="numeric"

@@ -43,13 +43,39 @@ it('requests only three repeating templates and sends history aggregates and bod
   expect(requests[0]?.messages[1]?.content).toContain('"bodyNotes":"Left knee gets sore after deep squats."')
 })
 
+it('replaces percentage weights with history kilograms', async () => {
+  const percentPlan = {
+    ...validPlan,
+    workouts: validPlan.workouts.map(item => ({
+      ...item,
+      exercises: item.exercises.map(exercise => ({
+        ...exercise,
+        sets: exercise.sets.map(set => ({ ...set, weight: '70%' })),
+      })),
+    })),
+  }
+  const { client } = mockClient([percentPlan])
+  expect(await generatePlan(client, 'deepseek-test', 'Get stronger', [
+    { exercise: 'Squat', appearances: 1, averageKg: 80, averageReps: 5 },
+  ])).toEqual({
+    ...validPlan,
+    workouts: validPlan.workouts.map(item => ({
+      ...item,
+      exercises: item.exercises.map(exercise => ({
+        ...exercise,
+        sets: exercise.sets.map(set => ({ ...set, weight: '80' })),
+      })),
+    })),
+  })
+})
+
 it('succeeds after correcting an invalid response', async () => {
   const { client, requests } = mockClient([{ ...validPlan, workouts: [] }, validPlan])
   expect(await generatePlan(client, 'deepseek-test', 'Get stronger')).toEqual({
     ...validPlan,
-    workouts: validPlan.workouts.map(workout => ({
-      ...workout,
-      exercises: workout.exercises.map(exercise => ({
+    workouts: validPlan.workouts.map(item => ({
+      ...item,
+      exercises: item.exercises.map(exercise => ({
         ...exercise,
         sets: exercise.sets.map(set => ({ ...set, weight: 'N/A' })),
       })),

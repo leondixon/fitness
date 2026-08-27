@@ -70,6 +70,6 @@
   }
 
   .field-line {
-    @apply min-w-0 border-0 border-b border-rule bg-transparent py-1 text-center tabular-nums outline-none focus:border-ink;
+    @apply min-w-0 border-0 border-b border-rule bg-transparent py-1 text-center tabular-nums outline-none placeholder:text-mute focus:border-ink;
   }
 }

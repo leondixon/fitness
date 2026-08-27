@@ -1,8 +1,8 @@
 import type { H3Event } from 'h3'
 import type { z } from 'zod'
 
+import type { loggedSetSchema } from '~~/server/schema/session'
 import { mapRoutineRow } from '~~/server/schema/persistedPlan'
-import { loggedSetSchema } from '~~/server/schema/session'
 import { getSupabaseServerClient } from './supabase'
 
 type LoggedSet = z.infer<typeof loggedSetSchema>
@@ -23,6 +23,21 @@ export function normalizeExerciseName(name: string) {
   return name.trim().toLocaleLowerCase().replace(/\s+/g, ' ')
 }
 
+export function parseKilogramWeight(weight: string) {
+  const trimmed = weight.trim()
+  if (!trimmed || trimmed.toUpperCase() === 'N/A' || trimmed.includes('%'))
+    return undefined
+  const kg = Number(trimmed.replace(/kg$/i, '').trim())
+  return Number.isFinite(kg) && kg >= 0 ? kg : undefined
+}
+
+export function prescribedKilograms(weight: string, fallbackKg?: number) {
+  const kg = parseKilogramWeight(weight)
+  if (kg !== undefined)
+    return String(kg)
+  return fallbackKg === undefined ? 'N/A' : String(fallbackKg)
+}
+
 export async function getCurrentPlan(event: H3Event, userId: string) {
   const { data, error } = await getSupabaseServerClient(event)
     .from('routine_versions')
@@ -39,20 +54,17 @@ export async function getCurrentPlan(event: H3Event, userId: string) {
 
   const plan = mapRoutineRow(data)
   const rows = await loadCompletedExerciseResults(event, userId)
-  const exercisesWithHistory = new Set(
-    aggregateExerciseHistory(rows).map(({ exercise }) => normalizeExerciseName(exercise)),
-  )
-  const lastSetsByExerciseId = lastLoggedSetsByExerciseId(rows)
+  const lastKg = lastWorkingKgByExerciseName(rows)
   const workouts = plan.workouts.map(workout => ({
     ...workout,
     exercises: workout.exercises.map((exercise) => {
-      const lastSets = lastSetsByExerciseId.get(exercise.id)
+      const fallbackKg = lastKg.get(normalizeExerciseName(exercise.name))
       return {
         ...exercise,
-        sets: exercisesWithHistory.has(normalizeExerciseName(exercise.name))
-          ? exercise.sets
-          : exercise.sets.map(set => ({ ...set, weight: 'N/A' })),
-        ...(lastSets ? { lastSets } : {}),
+        sets: exercise.sets.map(set => ({
+          ...set,
+          weight: fallbackKg === undefined ? 'N/A' : prescribedKilograms(set.weight, fallbackKg),
+        })),
       }
     }),
   }))
@@ -86,7 +98,7 @@ async function loadCompletedExerciseResults(event: H3Event, userId: string) {
   return data ?? []
 }
 
-export type HistoricalResult = {
+export interface HistoricalResult {
   exercise_id?: string
   normalized_name: string
   exercise_name: string
@@ -112,17 +124,49 @@ function parseLoggedSets(sets: unknown): LoggedSet[] {
   })
 }
 
-export function lastLoggedSetsByExerciseId(rows: HistoricalResult[]) {
-  const last = new Map<string, LoggedSet[]>()
+export function lastWorkingKgByExerciseName(rows: HistoricalResult[]) {
+  const last = new Map<string, number>()
   for (const row of rows) {
-    if (!row.exercise_id || last.has(row.exercise_id))
+    const key = normalizeExerciseName(row.normalized_name)
+    if (last.has(key))
       continue
     const sets = parseLoggedSets(row.sets)
     if (sets.length === 0)
       continue
-    last.set(row.exercise_id, sets)
+    last.set(key, Math.max(...sets.map(set => set.kg)))
   }
   return last
+}
+
+function sessionCompletedAt(row: HistoricalResult) {
+  const session = row.workout_sessions
+  const value = Array.isArray(session) ? session[0] : session
+  return value?.completed_at
+}
+
+export function sessionHistoryByExerciseName(rows: HistoricalResult[]) {
+  const byExercise = new Map<string, {
+    exercise: string
+    sessions: { completedAt: string, sets: LoggedSet[] }[]
+  }>()
+
+  for (const row of rows) {
+    const sets = parseLoggedSets(row.sets)
+    if (sets.length === 0)
+      continue
+    const key = normalizeExerciseName(row.normalized_name)
+    const entry = byExercise.get(key) ?? { exercise: row.exercise_name, sessions: [] }
+    entry.sessions.push({
+      completedAt: sessionCompletedAt(row) ?? '',
+      sets,
+    })
+    byExercise.set(key, entry)
+  }
+
+  return [...byExercise.values()].map(entry => ({
+    ...entry,
+    sessions: [...entry.sessions].sort((a, b) => a.completedAt.localeCompare(b.completedAt)),
+  }))
 }
 
 export function aggregateExerciseHistory(rows: HistoricalResult[]) {

@@ -5,13 +5,14 @@ import {
   createPlanLlmResponseJsonSchema,
   createPlanLlmResponseSchema,
 } from '~~/server/schema/create-plan'
+import { normalizeExerciseName, prescribedKilograms } from './plans'
 
 const requiredSchema = JSON.stringify(createPlanLlmResponseJsonSchema)
 
 const systemPrompt = `You generate useful workout plans as a practical strength and conditioning coach.
 Create exactly three ordered workout templates tailored to the user's request. These templates repeat forever in the given order, so do not add dates, weekdays, weeks, or scheduling fields.
 The user payload may include bodyNotes with injuries, imbalances, or other physical context. Use them to steer exercise selection and programming.
-Use numeric-looking prescriptions as strings for reps and weight. For an exercise with no matching exercise history, set every weight to "N/A". Only use bare kilogram values, with no units or percentage sign, when matching history is provided. Explicitly identify warmup sets.
+Use numeric-looking prescriptions as strings for reps and weight. For an exercise with no matching exercise history, set every weight to "N/A". When history is provided, prescribe only bare kilograms (for example "60" or "62.5") — never percentages, 1RM, or units. Explicitly identify warmup sets.
 Return only valid JSON matching this JSON Schema, with no markdown or extra text:
 ${requiredSchema}`
 
@@ -32,17 +33,24 @@ function parseResponse(content: string | null | undefined) {
 }
 
 function applyEvidenceBasedWeights(plan: CreatePlanLlmResponse, exerciseHistory: ExerciseHistory[]) {
-  const exercisesWithHistory = new Set(exerciseHistory.map(({ exercise }) => exercise.trim().toLocaleLowerCase().replace(/\s+/g, ' ')))
+  const lastKg = new Map(
+    exerciseHistory.map(entry => [normalizeExerciseName(entry.exercise), entry.averageKg]),
+  )
 
   return {
     ...plan,
     workouts: plan.workouts.map(workout => ({
       ...workout,
-      exercises: workout.exercises.map(exercise =>
-        exercisesWithHistory.has(exercise.name.trim().toLocaleLowerCase().replace(/\s+/g, ' '))
-          ? exercise
-          : { ...exercise, sets: exercise.sets.map(set => ({ ...set, weight: 'N/A' })) },
-      ),
+      exercises: workout.exercises.map((exercise) => {
+        const fallbackKg = lastKg.get(normalizeExerciseName(exercise.name))
+        return {
+          ...exercise,
+          sets: exercise.sets.map(set => ({
+            ...set,
+            weight: fallbackKg === undefined ? 'N/A' : prescribedKilograms(set.weight, fallbackKg),
+          })),
+        }
+      }),
     })),
   }
 }

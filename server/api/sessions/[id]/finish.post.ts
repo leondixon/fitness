@@ -1,5 +1,6 @@
 import { finishSessionParamsSchema, finishSessionRequestSchema, finishSessionResponseSchema } from '~~/server/schema/session'
 import { normalizeExerciseName } from '~~/server/utils/plans'
+import { prescribeWorkoutLoads } from '~~/server/utils/prescribe'
 import { mapSessionRow, sessionColumns } from '~~/server/utils/sessions'
 import { getSupabaseServerClient, requireUser } from '~~/server/utils/supabase'
 
@@ -61,6 +62,17 @@ export default defineEventHandler(async (event) => {
     .single()
   if (loadError || !data)
     throw createError({ statusCode: 500, statusMessage: 'Could not load the finished workout session.' })
+
+  if (input.results.length > 0) {
+    void (async () => {
+      try {
+        await prescribeWorkoutLoads(event, user.id, session.workout_template_id)
+      }
+      catch (error) {
+        console.error('Could not prescribe next loads', error)
+      }
+    })()
+  }
 
   return finishSessionResponseSchema.parse({ session: mapSessionRow(data), advanced })
 })

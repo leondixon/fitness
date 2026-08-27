@@ -14,11 +14,33 @@ const props = defineProps<{
 const emit = defineEmits<{
   save: [exerciseId: string, sets: WorkoutSession['results'][number]['sets']]
   undo: [exerciseId: string]
-  finish: []
+  finish: [results: { exerciseId: string, sets: WorkoutSession['results'][number]['sets'] }[]]
 }>()
+
+interface Logger {
+  snapshot: () => { exerciseId: string, sets: WorkoutSession['results'][number]['sets'] }
+}
+const loggers = new Map<string, Logger>()
+
+function bindLogger(id: string, el: unknown) {
+  const logger = el as Logger | null
+  if (logger)
+    loggers.set(id, logger)
+  else
+    loggers.delete(id)
+}
 
 function resultFor(exerciseId: string) {
   return props.session.results.find(result => result.exerciseId === exerciseId)
+}
+
+function collectResults() {
+  return [...loggers.values()].flatMap((logger) => {
+    const snapshot = logger.snapshot()
+    if (!snapshot.sets.length)
+      return []
+    return [{ exerciseId: snapshot.exerciseId, sets: snapshot.sets }]
+  })
 }
 </script>
 
@@ -35,15 +57,16 @@ function resultFor(exerciseId: string) {
       <exercise-logger
         v-for="exercise in workout.exercises"
         :key="exercise.id"
+        :ref="(el) => bindLogger(exercise.id, el)"
         :completed="resultFor(exercise.id)?.completed"
         :exercise="exercise"
-        :initial-sets="resultFor(exercise.id)?.sets ?? exercise.lastSets"
+        :initial-sets="resultFor(exercise.id)?.sets"
         @done="emit('save', exercise.id, $event)"
         @undo="emit('undo', exercise.id)"
       />
     </div>
 
-    <button class="btn-ink mt-auto" :disabled="finishing" type="button" @click="emit('finish')">
+    <button class="btn-ink mt-auto" :disabled="finishing" type="button" @click="emit('finish', collectResults())">
       {{ finishing ? 'Finishing…' : 'Finish' }}
     </button>
   </section>
