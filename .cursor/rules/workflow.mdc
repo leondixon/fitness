@@ -1,0 +1,14 @@
+---
+description: Core grill-spec-tickets-implement flow; Linear tracker; do not invent architecture
+alwaysApply: true
+---
+
+# Fitness agent workflow
+
+Follow `AGENTS.md`. Core flow: `/grill-with-docs` → optional `/to-spec` `/to-tickets` → `/implement`.
+
+Read `docs/agents/issue-tracker.md` before creating issues. Publish to Linear and `.scratch/`. If Linear MCP needs auth, authenticate or continue on the local mirror.
+
+Do not invent stack, persistence, or public contracts. Those are grilling/spec decisions.
+
+Do not use `~/.agents` product-manager / product-requirements / technical-requirements or root `plan.md` in this repo.
