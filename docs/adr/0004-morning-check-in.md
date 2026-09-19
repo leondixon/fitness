@@ -1,0 +1,3 @@
+# Check-in when sleep is recorded, or on demand
+
+Check-in produces a Pick when sleep is recorded, or when they ask. A missing sleep score does not block. Delivery (webhook vs poll) is not part of this decision. There is no generic "health score" trigger. If a Session is already in today's History, Check-in consults before Picking another; it does not silently add or refuse. Sleep score, Garmin training-readiness/HRV, and weight, when present, are inputs to Check-in judgment (ADR-0003). Hume weight and Garmin sleep already land in Apple Health; the first integration is whichever store is easiest, not a vendor religion.
