@@ -5,10 +5,10 @@ alwaysApply: true
 
 # Fitness agent workflow
 
-Follow `AGENTS.md`. Core flow: `/grill-with-docs` → optional `/to-spec` `/to-tickets` → `/implement`.
+Follow `AGENTS.md`. Core flow: `/grill-me` → `/to-spec` (one ticket) → optional `/to-tickets` (chunk only if it will not fit one implement chat) → `/implement`. Use `/grill-with-docs` when the session should also write `CONTEXT.md` and ADRs.
 
 Read `docs/agents/issue-tracker.md` before creating issues. Publish to Linear and `.scratch/`. If Linear MCP needs auth, authenticate or continue on the local mirror.
 
-Do not invent stack, persistence, or public contracts. Those are grilling/spec decisions.
+Do not invent stack, persistence, or public contracts. If the grill settled them, they belong on the ticket. If not, stop and ask; do not invent them in `/to-spec` or `/implement`.
 
 Do not use `~/.agents` product-manager / product-requirements / technical-requirements or root `plan.md` in this repo.

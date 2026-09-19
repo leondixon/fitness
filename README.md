@@ -6,13 +6,13 @@ Core dev flow lives in [`.cursor/skills/`](.cursor/skills/). Tracker is Linear p
 
 ## Main flow
 
-1. `/grill-with-docs` — interview until shared understanding; updates `CONTEXT.md` and ADRs as terms and hard decisions land.
-2. Small enough for one session → `/implement` here.
-3. Multi-session → `/to-spec` then `/to-tickets`, then a **fresh** chat per `/implement <ticket>`.
+1. `/grill-me` — interview until shared understanding. Use `/grill-with-docs` instead when you also want `CONTEXT.md` and ADRs updated as terms and hard decisions land.
+2. Same sitting → `/implement` here (skip `/to-spec`).
+3. Later sitting → `/to-spec` in this window (one ticket). `/to-tickets` only if that ticket will not fit one implement chat. Then a **fresh** chat per `/implement <ticket>`.
 4. `/implement` drives `/tdd` at agreed seams and finishes with `/code-review` before commit.
 
-Keep grill → spec → tickets in **one** context window. Clear between implement tickets.
+Keep grill → `/to-spec` → optional `/to-tickets` in **one** context window. Clear between implement tickets.
 
 ## Linear
 
-Authenticate the Linear MCP when asked. Specs and tickets publish there **and** to `.scratch/<slug>/`. If Linear is down, the local files are enough to continue.
+Authenticate the Linear MCP when asked. Tickets publish there **and** to `.scratch/<slug>/`. If Linear is down, the local files are enough to continue.

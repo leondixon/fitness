@@ -3,14 +3,14 @@
 **Team:** unset — run `list_teams` on Linear MCP and record the team key here after first publish.
 **Project:** Fitness (create if missing)
 
-Issues and specs for this repo live on **Linear**. A markdown mirror under `.scratch/` is always written so agents can keep working if Linear MCP is down.
+Tickets for this repo live on **Linear**. A markdown mirror under `.scratch/` is always written so agents can keep working if Linear MCP is down.
 
 Use the **Linear MCP** (`plugin-linear-linear`). If the namespace is `needsAuth`, call `mcp_auth`, then retry. If auth is refused, **do not block the flow**: publish to `.scratch/` only and tell the user Linear was skipped.
 
 ## Conventions
 
-- One feature per slug: Linear parent issue (the spec) + child issues (tickets)
-- Local mirror: `.scratch/<feature-slug>/spec.md` and `.scratch/<feature-slug>/issues/<NN>-<slug>.md`
+- One feature per slug: `/to-spec` publishes one Linear issue (the ticket). `/to-tickets` only if that ticket must be chunked: original becomes the parent, children are the implementable slices
+- Local mirror: `.scratch/<feature-slug>/ticket.md`; children (if any) at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`
 - Each local file has YAML frontmatter with `linear: TEAM-n` (or `none` if unpublished)
 - Triage state is a Linear label **and** a `Status:` line on the local file
 - Comments go on the Linear issue; append a short note under `## Comments` on the local file when Linear is skipped
@@ -21,7 +21,7 @@ Team and project: if unset, `list_teams` on Linear MCP and ask once; then record
 
 Discover tools with the Linear namespace before calling them. Typical mapping:
 
-- **Create**: `save_issue` (title, description, team, project, labels). For a child, set `parentId` to the spec issue.
+- **Create**: `save_issue` (title, description, team, project, labels). For a child, set `parentId` to the original ticket.
 - **Read**: `get_issue` with comments/relations.
 - **List**: `list_issues` (filter by project, label, state).
 - **Comment**: `save_comment`.

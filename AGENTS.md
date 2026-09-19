@@ -20,6 +20,8 @@ Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, created lazily. S
 
 ## Main flow
 
-`/grill-with-docs` → (`/to-spec` → `/to-tickets`) → `/implement` (drives `/tdd`, then `/code-review`). Skip spec and tickets when the work fits one session.
+`/grill-me` → `/to-spec` → optional `/to-tickets` → `/implement` (drives `/tdd`, then `/code-review`). Use `/grill-with-docs` instead of `/grill-me` when you also want `CONTEXT.md` and ADRs written as you go.
 
-Grill, spec, and tickets stay in one context window. Each `/implement` starts fresh from the ticket.
+`/to-spec` publishes **one** implementable ticket from the grill. `/to-tickets` only if that ticket will not fit one implement chat: it chunks into children and the original becomes the parent. Skip `/to-spec` when implementing in the same grill sitting.
+
+Grill, `/to-spec`, and optional `/to-tickets` stay in one context window. Each `/implement` starts fresh from a ticket (the unchunked `/to-spec` issue, or a child).
