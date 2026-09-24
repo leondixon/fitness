@@ -1,7 +1,7 @@
 # Issue tracker: Linear + local mirror
 
-**Team:** unset — run `list_teams` on Linear MCP and record the team key here after first publish.
-**Project:** Fitness (create if missing)
+**Team:** LEON (Personal)
+**Project:** Fitness app
 
 Tickets for this repo live on **Linear**. A markdown mirror under `.scratch/` is always written so agents can keep working if Linear MCP is down.
 
