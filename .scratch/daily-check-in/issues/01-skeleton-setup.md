@@ -1,6 +1,6 @@
 ---
 linear: LEON-28
-difficulty: high
+effort: hard
 ---
 
 # 01: Walking skeleton and Setup

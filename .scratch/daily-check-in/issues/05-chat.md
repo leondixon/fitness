@@ -1,6 +1,6 @@
 ---
 linear: LEON-39
-difficulty: high
+effort: hard
 ---
 
 # 05: Chat view with tools, messages and web push

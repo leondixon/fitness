@@ -1,6 +1,6 @@
 ---
 linear: LEON-40
-difficulty: medium
+effort: medium
 ---
 
 # 07: Inferred Sessions

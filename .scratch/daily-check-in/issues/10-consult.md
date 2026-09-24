@@ -1,6 +1,6 @@
 ---
 linear: LEON-31
-difficulty: medium
+effort: medium
 ---
 
 # 10: Consult on conflict

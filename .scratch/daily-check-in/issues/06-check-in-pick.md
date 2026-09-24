@@ -1,6 +1,6 @@
 ---
 linear: LEON-29
-difficulty: high
+effort: hard
 ---
 
 # 06: Check-in emits a Pick

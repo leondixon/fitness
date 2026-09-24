@@ -1,6 +1,6 @@
 ---
 linear: LEON-30
-difficulty: medium
+effort: medium
 ---
 
 # 09: Fatigue, same-group strength, Holds

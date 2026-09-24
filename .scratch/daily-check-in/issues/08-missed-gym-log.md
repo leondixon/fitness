@@ -1,6 +1,6 @@
 ---
 linear: LEON-41
-difficulty: medium
+effort: medium
 ---
 
 # 08: Missed gym log nag and Skip

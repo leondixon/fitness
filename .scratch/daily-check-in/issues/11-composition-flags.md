@@ -1,6 +1,6 @@
 ---
 linear: LEON-32
-difficulty: low
+effort: low
 ---
 
 # 11: Composition Flags

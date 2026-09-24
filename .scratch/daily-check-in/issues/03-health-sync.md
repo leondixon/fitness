@@ -1,6 +1,6 @@
 ---
 linear: LEON-33
-difficulty: medium
+effort: medium
 ---
 
 # 03: Health samples sync

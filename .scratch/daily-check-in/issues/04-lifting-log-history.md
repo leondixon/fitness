@@ -1,6 +1,6 @@
 ---
 linear: LEON-27
-difficulty: medium
+effort: medium
 ---
 
 # 04: Log lifting Results into History

@@ -1,6 +1,6 @@
 ---
 linear: LEON-26
-difficulty: medium
+effort: medium
 ---
 
 # 02: Exercise catalog and Activation map
