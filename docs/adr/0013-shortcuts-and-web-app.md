@@ -1,0 +1,3 @@
+# Health arrives by Shortcut; the app is a home-screen web app
+
+There is no native iOS app. Apple Health has no cloud API, so scheduled iOS Shortcut automations (wake-up and a few times a day) post the last ~36 hours of Health samples to the backend, which stores them idempotently. Chat and the Session view are a home-screen web app with web push. Swift on a Mac and Expo were rejected: both need the $99/yr Apple Developer account to run on the phone with push and without weekly reinstalls, and Swift cannot be built from Linux. The cost is no instant "sleep landed" trigger (Check-in runs on the first sync that carries last night's sleep) and a browser UI.

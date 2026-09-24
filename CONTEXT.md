@@ -93,8 +93,12 @@ The athlete stating what they are doing or about to do. If that conflicts with t
 _Avoid_: log (when the point is to change what comes next, not merely to record)
 
 **Results**:
-The athlete-imported outcome of a completed Session. Lifting Results are the Exercises, sets, reps, load, and rest. Yoga Results are a type label (which carries Intensity) and duration. Runs are not Results; they are inferred into History.
-_Avoid_: log (when the imported outcome is the domain concept)
+The outcome of a completed Session. Lifting Results are the Exercises, sets, reps, load, and rest, logged by the athlete. Yoga Results are a type label (which carries Intensity) and duration: the duration is inferred from body signals and the athlete gives the type when confirming. Runs are not Results; they are inferred into History, and the athlete may correct one or add one no device recorded.
+_Avoid_: log (when the outcome is the domain concept), import
+
+**Inferred Session**:
+A run or yoga Session detected from body signals (heart rate, a device-recorded workout) rather than logged. Check-in asks the athlete to confirm it. If they have not answered by the next Check-in, it counts as confirmed; a rejected one leaves History.
+_Avoid_: auto-log, detected workout
 
 **Classification**:
 The single Quality assigned to a completed Session from its Results (or from inference, for a run). Not taken from the Pick. A run is conditioning. Yoga is mobility. Lifting is strength or hypertrophy by a rep rule for now.

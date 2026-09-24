@@ -1,0 +1,3 @@
+# Check-in judgment is deterministic code; Jev is deferred
+
+Check-in's judgment calls (readiness tier, which Exercises, the progression step) are made by deterministic code, still without a who-wins table (ADR-0003). Using TypeSafe's Jev for those calls as calibrated Choices was considered: it fits the fuzzy calls, but it is new, waitlist-only, non-deterministic and weak at arithmetic, so code would need a working default for every call anyway. Jev may be tried later behind the same judgment seam, with both answers stored so it has to beat the rule before it is trusted. An LLM deciding the Pick was rejected; the Chat LLM only talks and calls tools.
