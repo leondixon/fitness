@@ -1,0 +1,34 @@
+#!/bin/sh
+# Copy .env into a new worktree from another worktree (prefers main).
+# post-checkout also runs on git worktree add. Never fail the checkout.
+set -eu
+
+[ "${3:-}" = 1 ] || exit 0
+
+dest=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+[ -e "$dest/.env" ] && exit 0
+
+src=
+while IFS= read -r line || [ -n "$line" ]; do
+	case "$line" in
+	worktree\ *)
+		wt=${line#worktree }
+		if [ "$wt" != "$dest" ] && [ -f "$wt/.env" ]; then
+			case "$wt" in
+			*/main)
+				src=$wt/.env
+				break
+				;;
+			esac
+			[ -n "$src" ] || src=$wt/.env
+		fi
+		;;
+	esac
+done <<EOF
+$(git worktree list --porcelain)
+EOF
+
+[ -n "$src" ] || exit 0
+cp -a "$src" "$dest/.env" || exit 0
+echo "post-checkout: copied .env from $src" >&2
+exit 0
