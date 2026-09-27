@@ -11,7 +11,7 @@ effort: medium
 
 **Touches:** S2 Consult outcome; consult-raised / resolve-consult routes; Chat LLM resolve-consult tool; consult message buttons in Chat view
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] If today's History already has a Session, Check-in consults before Picking another.
 - [ ] A Declaration that conflicts with the Pick is asked about, not silently cancelled.

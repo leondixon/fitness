@@ -1,302 +1,229 @@
-# Data movement — Health samples, logged Sessions and Chat into a daily Pick
+# Data movement — Setup, Activation and logged Sessions into a progressing Plan
 
-Agreed 2026-09-24 in the `/ship` grill for LEON-25, branch `feature/leon-25` (not yet created).
+Agreed 2026-09-27 in the `/ship` grill for LEON-25 (first cut), branch `feature/leon-25` (not yet created). Replaces the 2026-09-24 daily Check-in model, which moves to a new epic.
 
 ## What moves
 
-Apple Health samples (sleep, HRV, Composition, heart rate, device-recorded workouts) arrive at the backend from the athlete's own scheduled iOS Shortcuts and are stored once each. From them the backend infers runs and yoga as Inferred Sessions and notices gym visits with no lifting logged. The athlete logs lifting Results and confirms, rejects, corrects or adds Sessions in the Session view of a home-screen web app. In the Chat view an LLM records Readiness, Declarations, day-of Exclusions and confirmed Setup changes. Once a day, the first sync carrying last night's sleep runs Check-in, which reads Setup, History, today's inputs, body signals and the Exercise catalog and writes today's Pick (or raises a consult), delivered as a Chat message plus web push.
+The athlete saves Setup (Goal, Injury notes, standing Exclusions) in the web app. Claude Code, on the athlete's own subscription, connects to an MCP server on the backend: it records Activation research for catalog Exercises (seeded from an open dataset), reads Setup, the catalog and History, and saves a Plan, a rotation of Sessions with Exercises, sets and rep ranges, which the backend validates whole. The Session view shows the next Session in the rotation with each Exercise prescribed by double progression (or Calibration on first appearance). The athlete logs the Session there; History, Classification, Lookback and each Exercise's progress update.
 
 ## Commands
 
 | Command | Issued by | Asks for | Outcomes |
 |---|---|---|---|
-| sync-health-data | iOS Shortcut (wake-up, 10:00, 14:00, 21:00; last ~36 h) | store Health samples | health-data-synced (new/changed samples stored; re-sent ones ignored). If it carries last night's sleep and Check-in has not run today, it triggers run-check-in. Unauthorised token → rejected. |
-| infer-session | every sync | turn a run or yoga workout record into an Inferred Session | session-inferred; nothing when the workout is already known |
-| detect-missed-gym-log | every sync, and app open | find a gym workout with no lifting Results | gym-log-missing (nag: Chat message + web push that evening via the 21:00 sync, then daily); nothing when logged or Skipped |
-| confirm-inferred-session | athlete (Chat message / Session view); run-check-in for unanswered ones | accept an Inferred Session (yoga: with its type) | inferred-session-confirmed |
-| reject-inferred-session | athlete | discard an Inferred Session | inferred-session-rejected (leaves History) |
-| correct-run | athlete, Session view | fix time/speed of an inferred run | run-corrected |
-| add-run | athlete, Session view | record a run no device recorded | run-added |
-| log-lifting-results | athlete, Session view (Hevy-like) | store Exercise, sets, reps, load, rest | lifting-results-logged (stops any missed-log nag) |
-| skip-gym-log | athlete, from the nag | stop nagging | gym-log-skipped (gym Session stays with heart-rate exertion, no Results, no Classification) |
-| confirm-setup-change | athlete, after the Chat LLM proposes a change | save Plan / Qualities / Injuries / standing Exclusions | setup-changed |
-| record-check-in-inputs | Chat LLM tool | save Readiness, a Declaration or a day-of Exclusion | check-in-inputs-recorded |
-| end-chat | athlete taps Done; or app opened after 30 idle minutes | close the Chat | chat-ended (transcript kept, not re-sent) |
-| run-check-in | first sleep-bearing sync of the day; athlete asks; Chat LLM tool; consult re-pick | produce today's Pick | pick-made (replaces any earlier Pick today) · consult-raised · inferred-session-confirmed for Inferred Sessions still unanswered |
-| resolve-consult | athlete, via buttons (keep, drop, re-pick) or a reply in words the Chat LLM turns into the same call | settle a consult | consult-resolved; re-pick re-runs run-check-in |
+| save-setup | athlete, Setup form; Claude via MCP | store Goal, Injury notes, standing Exclusions | setup-saved (a Plan saved earlier becomes stale) |
+| record-activation | Claude via MCP | store weights on Muscles for a catalog Exercise or yoga type | activation-recorded · activation-rejected (unknown Exercise, weight outside 0..1) |
+| save-plan | Claude via MCP | store a new Plan replacing the current one | plan-saved · plan-rejected (every error listed; nothing saved) |
+| log-session | athlete, Session view | store the sets done for the next Session | session-logged · session-rejected (no Plan, or an Exercise not in that Session) |
 
 ## Events
 
 | Event | Recorded for |
 |---|---|
-| health-data-synced | body signals for History and Check-in; triggers inference, missed-log detection, and possibly Check-in |
-| session-inferred | a run or yoga awaiting confirmation |
-| gym-log-missing | a gym visit awaiting lifting Results |
-| inferred-session-confirmed / -rejected | the Inferred Session enters / leaves History |
-| run-corrected / run-added | History of runs |
-| lifting-results-logged | Results per Exercise; Classification; Lookback; Trend |
-| gym-log-skipped | stops the nag; exertion stays in History |
-| setup-changed | the standing Plan |
-| check-in-inputs-recorded | today's inputs |
-| chat-ended | stored transcript; next Chat starts fresh |
-| pick-made | today's Pick; "Check-in already ran today" |
-| consult-raised / consult-resolved | the consult conversation and its outcome |
+| setup-saved | Setup; marks an existing Plan stale |
+| activation-recorded / -rejected | the catalog's Activation map; a Plan may only use Exercises with Activation |
+| plan-saved / -rejected | the current Plan; clears staleness |
+| session-logged / -rejected | History (Results per Exercise, Classification, Lookback) and each Exercise's progress |
 
 ## State
 
-- **Health samples stored** (type, start, end, source, value), from health-data-synced. Identity is (type, start, end, source); a corrected value replaces the stored one.
-- **History**: Sessions (logged lifting, Inferred Sessions once confirmed, corrected/added runs, skipped gym visits), Results per Exercise, body signals. Written by the Session events above.
-- **Setup**: Plan, Qualities, Injuries, standing Exclusions, from setup-changed.
-- **Today's inputs**: Readiness, Declarations, day-of Exclusions, from check-in-inputs-recorded.
-- **Chat transcript**, from chat-ended.
-- **Pick**, from pick-made; its existence for today is "Check-in already ran today".
+- **Setup**: Goal (free text), Injury notes (free text Claude reads), standing Exclusions (kit).
+- **Exercise catalog**: seeded Exercises with kit and Working group; Activation weights on Muscles from record-activation.
+- **Plan**: ordered Sessions; each Exercise with sets and rep range; saved-at, compared against Setup's saved-at for staleness.
+- **History**: logged Sessions, Results per Exercise (sets, reps, load, rest), Classification.
+- **Exercise progress**: per Exercise in the Plan, current load, target reps, streak of top-of-range Sessions, misses below range.
 
-The grill did not settle table or column shapes beyond the sample identity; those are the implementer's, inside the seams below.
+Table and column shapes beyond these fields are the implementer's, inside the seams below.
 
 ## Read models
 
 | Read model | Kept current by | Read by |
 |---|---|---|
-| Check-in already ran today | pick-made | sync-health-data (decides whether to trigger Check-in) |
-| Inferred Session awaiting confirmation | session-inferred, confirmed/rejected | Chat message + web push; Session view |
-| Gym Session awaiting lifting Results | gym-log-missing, lifting-results-logged, gym-log-skipped | the nag; Session view |
-| History | the Session events, stored samples | run-check-in; Session view |
-| Setup | setup-changed | Chat LLM; run-check-in |
-| Today's inputs | check-in-inputs-recorded | Chat LLM; run-check-in |
-| Exercise catalog (Exercises, yoga types, Activation on Muscles) | out-of-band seed from an open dataset plus an Activation research pass | run-check-in |
-| Pick (Session or Inactivity, with any Hold or Flag) | pick-made | Session view; Chat message + web push |
+| Setup | setup-saved | Setup form; Claude via MCP |
+| Exercise catalog | seed, activation-recorded | Claude via MCP; save-plan validation |
+| Plan (with stale flag) | plan-saved, setup-saved | Claude via MCP; Session view banner |
+| Next Session | plan-saved, session-logged | Session view; Claude via MCP |
+| History (Classification, Lookback) | session-logged | Session view; Claude via MCP |
+| Exercise progress | session-logged | Next Session; Claude via MCP |
 
 ## Decisions
 
-- No native app (ADR-0013). Apple Health reaches the backend only through the athlete's own Shortcuts; the backend documents the sync payload it accepts. Zepp and Garmin direct APIs were rejected (no individual API; unofficial routes break and breach terms). Swift was rejected over free signing expiring every 7 days.
-- Stack: Hono on Vercel Functions, Drizzle on Neon Postgres, Vitest; SvelteKit web app with web push; monorepo `apps/api` + `apps/web`, no shared types package. Single athlete, static device token.
-- Check-in judgment is deterministic code (ADR-0014); Jev deferred. The Chat LLM is GPT-6 Sol (standard tier) via Vercel AI Gateway, for Chat only, with tools: propose Setup change, record today's inputs, run-check-in, resolve-consult. A Setup change is saved only after the athlete confirms.
-- Check-in runs automatically once a day, on the first sync that carries last night's sleep; later syncs never re-trigger it. Inference and missed-gym detection run on every sync.
-- No cron: timed work is checked on sync and on app open (21:00 sync is the evening nag; Chat timeout checked lazily; auto-confirm at the next Check-in).
-- Inferred Sessions come from Health workout records only; raw heart rate is not mined.
-- The gym is assumed to have everything except Exclusions; no inventory.
-- Boundaries: Apple Health, the Shortcuts, the athlete's UI and the catalog seed are `start`s; the Chat transcript is an `end` (kept, never read back into a Chat).
-- Out of scope: look-ahead of the next 3 Sessions; Momence booking; Jev; plus LEON-25's existing out-of-scope list.
+- First cut only (ADR-0015). Health sync, Chat, web push, Inferred Sessions, missed-log nag, fatigue and Holds, consult and Composition Flags move to a new epic for a re-grill.
+- Plan is redefined as the rotation (glossary). Sessions are done strictly in order; no days, no Session length in Setup.
+- No LLM in the app. Claude Code on the athlete's subscription reads and writes through an MCP server served over Streamable HTTP from the Hono app; bearer = the static device token. MCP can read Setup, catalog, History with Lookback, Exercise progress, Plan with its stale flag and Next Session; it can write Setup, Activation and the Plan. Results are logged only in the Session view.
+- Activation research is Claude's, written through MCP; a Plan cannot use an Exercise without Activation (ADR-0007).
+- save-plan validates the whole Plan: every Exercise in the catalog with Activation, none needing standing-Excluded kit, sets and rep range sane (sets ≥ 1, 1 ≤ bottom ≤ top). Any error rejects it all, listing every error for Claude to fix.
+- Double progression: +1 rep target within the range; every set at the top in 3 Sessions in a row → next time +1 load step and target back to the bottom; 2 Sessions in a row below the bottom → −1 load step. A skipped Exercise leaves its streak untouched; fewer sets than prescribed is a miss.
+- Load steps in kg by kit: barbell +2.5, dumbbell +2 per hand, machine or cable +5; bodyweight progresses by reps only.
+- Calibration: first appearance prescribes sets × bottom-of-range reps with no load; the logged load seeds progress.
+- Runs and yoga are assumed to happen outside the app. Classification (≤5-rep majority) and the 5-Session Lookback are kept for History and MCP.
+- Stack: Hono on Vercel Functions, Drizzle on Neon Postgres, Vitest; SvelteKit home-screen web app; pnpm monorepo `apps/api` + `apps/web`, no shared types package.
+- Boundaries: the Setup form, Claude Code and the open dataset are starts; rejected events are ends.
 
 ## Slices
 
-1. **sync-health-data** — given a Shortcut POSTs ~36 h of samples, then health-data-synced + samples stored; a re-sent sample is stored once, a corrected value replaces it; triggers Check-in only if it carries last night's sleep and Check-in has not run today.
-2. **infer-session** — given a synced running or yoga workout record, then session-inferred + Inferred Session awaiting confirmation.
-2b. **detect-missed-gym-log** — given a synced gym workout and no lifting Results for it, then gym-log-missing + Gym Session awaiting lifting Results; nag that evening, then daily, until logged or Skipped.
-3a. **confirm-inferred-session** — then inferred-session-confirmed + History (yoga type picked on confirm).
-3b. **reject-inferred-session** — then inferred-session-rejected; it leaves History.
-4a. **correct-run** — then run-corrected + History.
-4b. **add-run** — then run-added + History.
-5. **log-lifting-results** — then lifting-results-logged + History.
-5b. **skip-gym-log** — then gym-log-skipped; nagging stops; the gym Session stays with exertion, no Results, no Classification.
-6a. **confirm-setup-change** — given the athlete confirms a change the Chat LLM proposed, then setup-changed + Setup.
-6b. **record-check-in-inputs** — given Readiness, a Declaration or a day-of Exclusion in Chat, then check-in-inputs-recorded + Today's inputs.
-6c. **end-chat** — given Done, or app opened after 30 idle minutes, then chat-ended + transcript kept; next Chat starts fresh.
-7. **run-check-in** — given the first sleep-bearing sync, the athlete asking, or the Chat LLM tool, then pick-made + Pick (Chat message + web push), replacing any earlier Pick today; unanswered Inferred Sessions count as confirmed.
-7b. **run-check-in (consult)** — given a clashing Declaration, a Session already in today's History, or a run inferred after a Pick, then consult-raised + consult Chat message.
-8. **resolve-consult** — given a consult and keep/drop/re-pick (buttons, or words via the Chat LLM), then consult-resolved; re-pick re-runs Check-in.
+1a. **save-setup** — where the form holds a Goal, Injury notes and Exclusions, then setup-saved.
+1b. **Setup view** — given setup-saved, then Setup.
+1c. **Stale Plan** — given plan-saved then setup-saved, then Plan reads as stale (banner and MCP flag).
+2a. **record-activation** — given the seeded catalog, where Claude sends weights for a catalog Exercise or yoga type, then activation-recorded.
+2b. **record-activation rejected** — unknown Exercise or weight outside 0..1, then activation-rejected.
+2c. **Catalog view** — given activation-recorded, then Exercise catalog shows it.
+3a. **save-plan** — given Setup and Activation, a valid Plan, then plan-saved.
+3b. **save-plan rejected** — unknown Exercise, no Activation, excluded kit, or bad sets/range, then plan-rejected listing every error, nothing saved.
+3c. **Plan view** — given plan-saved, then Plan.
+4a. **Next Session, first time** — given plan-saved and nothing logged, then the first Session with every Exercise in Calibration.
+4b. **Next Session, progressed** — given the first Session logged with an Exercise at the top of its range for the 3rd time in a row, then the next Session is the second, and that Exercise's next appearance carries +1 load step at the bottom of the range.
+5a. **log-session** — given plan-saved, sets logged with some Exercises skipped, then session-logged.
+5b. **log-session rejected** — no Plan, or an Exercise not in the next Session, then session-rejected.
+5c. **History view** — given session-logged, then History with Classification and Lookback.
+5d. **Progress view** — given session-logged with fewer sets on one Exercise and another skipped, then the first counts a miss and the second's streak is unchanged.
 
 ## Seams
 
-| Seam | Where it lives | Status | Slices |
+| Seam | Where | Status | Slices |
 |---|---|---|---|
-| **S1 Backend HTTP interface.** Tests call the Hono app in-process (`app.request`) against a real Postgres in Docker. The clock, the Chat LLM (AI SDK mock model scripting tool calls in tests; GPT-6 Sol via AI Gateway in prod) and the web-push sender are adapters passed in. | `apps/api` | new | 1, 2, 2b, 3a, 3b, 4a, 4b, 5, 5b, 6a, 6b, 6c, 7 (trigger / replace / push wiring), 7b (consult wiring), 8 |
-| **S2 Check-in judgment**, a pure module: snapshot (Setup, History, today's inputs, body signals, Exercise catalog with Activation, today's date) → Pick (Session or Inactivity, with any Hold or Flag) or Consult. No database, no clock. Every judgment rule is tested here with plain data: Lookback, readiness, same-group strength, Activation fatigue, Trend and transfer, load, Holds, Composition Flag. | `apps/api` (e.g. `src/check-in`) | new | 7, 7b |
-| **S3 Web views.** Svelte component tests with the API client faked: Session view (Pick, Hevy-style set logging, confirm/reject Inferred Session with yoga type, correct/add run, Skip gym log, consult buttons) and Chat view (send, stream, Done). Plus a dev script and browser-MCP config so an agent can drive the running app. | `apps/web` | new | 3a, 3b, 4a, 4b, 5, 5b, 6a, 6b, 6c, 7 (Pick shown), 8 |
+| **S1 Backend HTTP interface, including MCP.** Tests call the Hono app in-process against a real Postgres in Docker; MCP tools are exercised with the MCP SDK client against the in-process endpoint. The clock is an adapter. | `apps/api` | new | all |
+| **S2 Progression**, a pure module: an Exercise's sets, rep range, load step and its logged history in the Plan → the next prescription (load and target reps, or Calibration). No database, no clock. | `apps/api` | new | 4a, 4b, 5d |
+| **S3 Web views.** Svelte component tests with the API client faked: Setup form, Session view (next Session, logging, stale banner), History. Plus a dev script and browser-MCP config so an agent can drive the running app. | `apps/web` | new | 1a, 1c, 4a, 5a, 5c |
 
 ## Appendix: the fence
 
 ```eventmodel
-title Daily Check-in picks a calibrated Session
-subtitle LEON-25
+title Plan rotation with progressive overload
+subtitle LEON-25 first cut
 
 # decisions
-# - No native iOS app. The client is a home-screen web app (PWA) with two views that toggle: Chat view and Session view.
-#   It notifies through web push.
-# - Chat: refine the Plan, give an update on an Injury, talk recovery.
-# - Session view: shows the next Session (today's Pick); lifting is logged there and runs corrected or added.
-# - "Plan" means the standing Goal, Qualities and Injuries (Setup), not a view.
-# - Backend owns the data and runs Check-in: TypeScript, Hono on Vercel Functions, Drizzle ORM on Neon Postgres, Vitest.
-# - Apple Health reaches the backend through several scheduled iOS Shortcut automations (e.g. on wake-up, 10:00, 14:00,
-#   21:00). Each POSTs the last ~36 hours of Health samples (sleep, HRV, workouts, Composition) to the backend.
-# - The athlete builds the Shortcut themselves on the phone; the backend documents the sync payload it accepts.
-# - Apple Health via Shortcuts is the single source. Zepp/Garmin direct APIs rejected: no individual API, and the
-#   unofficial routes break and breach terms.
-# - A Health sample's identity is (type, start, end, source). A re-sent sample matches and is stored once; a device's
-#   corrected value replaces the stored one.
-# - Check-in runs automatically once a day: the first sync that carries last night's sleep triggers it. Later syncs that
-#   day never re-trigger it (sync-health-data consults "Check-in already ran today"); they catch late sleep and
-#   afternoon workouts. After that Check-in runs only when the athlete asks, when the Chat LLM calls it as a tool, or
-#   when a consult resolves as re-pick.
-# - No cron. Timed work is checked on sync and on app open: the missed-gym nag (the 21:00 sync serves as the evening
-#   nag, then daily), the 30-minute Chat timeout (checked lazily when Chat is next opened), and auto-confirm of
-#   Inferred Sessions (at the next Check-in).
-# - Logged lifting Results go straight to the backend from the web app.
-# - Web app: SvelteKit. Its tests are component tests, and the app is set up so an agent can drive it through a
-#   browser MCP.
-# - Monorepo: apps/api (Hono) and apps/web (SvelteKit); no shared types package.
-# - Auth: single athlete, static device token (on the device, and a Vercel env var on the backend).
-# - All body signals (sleep, HRV, Composition, heart rate, device-recorded workouts) are read from Apple Health;
-#   which device wrote them (Amazfit, Garmin, Hume) does not matter.
-# - The Pick is not made by an LLM. Check-in judgment (readiness, Exercise choice, progression step) is deterministic code.
-# - Jev: later experiment, out of scope.
-# - Equipment: the gym is assumed to have everything except standing and day-of Exclusions; no inventory is kept.
-# - The Chat LLM serves the Chat view only: OpenAI GPT-6 Sol (standard tier, not Flex) via Vercel AI Gateway. Its tools
-#   read and update Setup (Plan, Qualities, Injuries, Exclusions) and today's inputs (Readiness, Declarations, day-of
-#   Exclusions). It may also call run-check-in on its own (e.g. "I feel wrecked, give me something easier"): it records
-#   the Readiness/Declaration and re-runs Check-in; the new Pick replaces the old one (ADR-0001).
-# - A Setup change proposed in Chat is confirmed by the athlete before it is saved (chat-only, kept for now).
-# - A Chat ends when the athlete taps Done or after 30 idle minutes (the same end-chat). The transcript is stored but
-#   not sent to the next Chat; only what the Chat changed (Setup, Readiness, Declarations) carries over.
-# - When sleep is synced, the Pick is delivered as a Chat message plus a web push.
-# - Consults (ticket 06: a Declaration clashes with the Pick, a Session is already in today's History, a run inferred
-#   after a Pick) happen as Chat messages. The athlete resolves one with buttons on the consult message (keep the Pick,
-#   drop it, re-pick) or with a reply in words, which the Chat LLM handles by calling the same resolve-consult.
-# - Check-in reads History (ADR-0001: Plan, History, Readiness, Declarations and body signals).
-# - Runs and yoga are Inferred Sessions detected from Health workout records only (running, yoga written by
-#   Garmin/Amazfit); raw heart rate is not mined; a Chat message plus web push asks
-#   the athlete to confirm. Yoga's type is picked on confirm. Unanswered by the next Check-in counts as confirmed;
-#   a rejected one leaves History.
-# - The athlete may edit an inferred run (time/speed) and add a run no device recorded.
-# - Lifting Results are logged in the Session view, Hevy-like. The Garmin gives gym exertion (heart rate) only, not the lifts.
-# - Missed gym log: Health shows a gym workout (Garmin heart-rate exertion) but no lifting was logged, so the backend
-#   nags (Chat message + web push) that evening, then once a day until it is logged or Skipped. Skip stops the nagging;
-#   the gym Session stays in History with its heart-rate exertion but no Results and no Classification.
-# - Exercise catalog: seeded out of band from an open dataset (e.g. free-exercise-db / wger), not a command on the board;
-#   an upfront research pass assigns Activation weights on Muscles; stored as reviewable data. Yoga types get
-#   Activation the same way.
-# - Out of scope: a look-ahead of the next 3 Sessions (dropped for now).
-# - Out of scope: Momence yoga booking (separate ticket later).
-# - Client re-confirmed: Shortcuts + web app (ADR-0013). A native Swift app was reconsidered and rejected: free signing
-#   expires every 7 days, and $99/yr otherwise.
-# - Inference (runs, yoga) and missed-gym detection run on every sync; only Check-in waits for last night's sleep.
-# - The athlete asked to only spec in this session; implementation runs later.
+# - First cut: generate a Plan with progressive overload. Health sync, Chat, web push, Inferred Sessions, missed-log nag,
+#   fatigue/Holds, consult and Composition Flags move to a new epic for a re-grill.
+# - Plan is redefined: the repeatable rotation of Sessions (e.g. Upper A / Lower B, or PPL). Not dated, not per day:
+#   Sessions are done strictly in order. Goal, Qualities, Injuries and Exclusions are Setup.
+# - No LLM in the app. The athlete asks Claude (Claude Code, own subscription) to design the Plan; Claude reads and writes
+#   through an MCP server the backend exposes (bearer = static device token).
+# - MCP tools: read Setup, Exercise catalog, History (with Classification and Lookback), per-Exercise progress, the Plan
+#   (including whether it is stale); write Setup, Activation weights, and the Plan. Results are never logged via MCP.
+# - Activation research is done by the athlete through Claude and written via MCP. A Plan cannot use an Exercise that has
+#   no Activation yet (ADR-0007).
+# - save-plan validates the whole Plan (every Exercise in the catalog with Activation, none needing standing-Excluded
+#   kit, sane sets and rep range) and saves nothing on any error, returning every error so Claude can fix and resave.
+# - Setup form: Goal (free text), Injuries (free-text notes Claude reads), standing Exclusions (kit from the catalog).
+#   No days per week, no Session length. Changing Setup after a Plan exists marks the Plan stale: a banner in the Session
+#   view and a flag on the MCP Plan read, until a new Plan is saved.
+# - Double progression, deterministic: each Plan Exercise has sets and a rep range. Every set at the top of the range in
+#   3 consecutive Sessions -> next time add one load step and return to the bottom of the range; otherwise target +1 rep.
+#   Missing the bottom of the range twice in a row drops one load step. An Exercise skipped in a Session leaves its streak
+#   untouched; fewer sets than prescribed is a miss.
+# - Load steps in kg by kit: barbell +2.5, dumbbell +2 per hand, machine/cable +5; bodyweight progresses by reps only.
+# - Calibration: the first time an Exercise appears, the Session prescribes sets x target reps with no load; the athlete
+#   picks a weight and logs what they did, which seeds its progress.
+# - Runs and yoga are assumed to happen outside the app; the Plan covers lifting.
+# - Classification (<=5-rep majority) and the 5-Session Lookback are kept and shown in History, and readable via MCP.
+# - Stack: Hono on Vercel, Drizzle on Neon Postgres, Vitest; SvelteKit home-screen web app; MCP over Streamable HTTP
+#   from the same Hono app.
 
 # seams
-# - Seam 1 (new), backend HTTP interface: tests call the Hono app in-process (app.request) against a real Postgres in
-#   Docker; the clock, the Chat LLM (AI SDK mock model scripting tool calls in tests; GPT-6 Sol via Vercel AI Gateway
-#   in prod) and the web-push sender are adapters passed in. Lives in apps/api.
-#   Slices: 1, 2, 2b, 3a, 3b, 4a, 4b, 5, 5b, 6a, 6b, 6c, 7 (trigger once a day / replace Pick / push wiring),
-#   7b (consult wiring), 8.
-# - Seam 2 (new), Check-in judgment, a pure module: snapshot (Setup, History, today's inputs, body signals, Exercise
-#   catalog with Activation, today's date) -> Pick (Session or Inactivity, with any Hold or Flag) or Consult. No
-#   database, no clock. Lives in apps/api (e.g. src/check-in). All judgment rules for slices 7 and 7b are tested here:
-#   Lookback, readiness, same-group strength, Activation fatigue, Trend and transfer, load, Holds, Composition Flag.
-#   Slices: 7, 7b.
-# - Seam 3 (new), web views: Svelte component tests for the Session view (Pick, Hevy-style set logging,
-#   confirm/reject Inferred Session with yoga type, correct/add run, Skip gym log, consult buttons) and the Chat view
-#   (send, stream, Done) with the API client faked; plus a dev script and browser-MCP config so an agent can drive
-#   the running app. Lives in apps/web.
-#   Slices: 3a, 3b, 4a, 4b, 5, 5b, 6a, 6b, 6c (Chat view send/stream/Done), 7 (Pick shown), 8 (their views).
-# - Slice -> seams: 1: S1 | 2: S1 | 2b: S1 | 3a: S1, S3 | 3b: S1, S3 | 4a: S1, S3 | 4b: S1, S3 | 5: S1, S3 |
-#   5b: S1, S3 | 6a: S1, S3 | 6b: S1, S3 | 6c: S1, S3 | 7: S1, S2, S3 (Pick shown) | 7b: S1, S2 | 8: S1, S3
+# - S1 (new) backend HTTP interface, including the MCP endpoint: tests call the Hono app in-process against a real
+#   Postgres in Docker; MCP tools are exercised with an MCP SDK client over the in-process transport. apps/api.
+#   Slices 1-6.
+# - S2 (new) progression, a pure module: an Exercise's sets, rep range, load step and its logged history in the Plan ->
+#   the next prescription (load and target reps, or calibration). No database, no clock. apps/api. Slices 5, 6.
+# - S3 (new) web views: Svelte component tests with the API client faked, for the Setup form, the Session view (next
+#   Session, logging, stale banner) and History; plus a dev script and browser-MCP config. apps/web. Slices 1, 5, 6.
 
-step 1 Scheduled iOS Shortcuts sync Apple Health samples to the backend
-step 2 Backend infers a run or yoga Session
-step 3 Athlete confirms or rejects the Inferred Session
-step 4 Athlete corrects or adds a run
-step 5 Athlete logs lifting Results
-step 6 Athlete updates Setup or today's inputs in Chat
-step 7 Check-in picks a Session
-step 8 Athlete sees the Pick
+step 1 Athlete fills in Setup
+step 2 Claude records Activation research
+step 3 Claude designs the Plan
+step 4 Athlete sees the next Session
+step 5 Athlete logs the Session
 
-extern 1 Apple Health (sleep, HRV, Composition, heart rate, workouts)
-ui 1 iOS Shortcut (athlete's automation; scheduled: wake-up, 10:00, 14:00, 21:00; last ~36 h)
-command 1 sync-health-data
-event 1 health-data-synced
-state 1 Health samples stored (type, start, end, source, value)
-read 1 Check-in already ran today (today's Pick exists)
+ui 1 Setup form (Goal, Injuries, standing Exclusions)
+command 1 save-setup
+event 1 setup-saved
+read 1 Setup
 
-ui 2 App opened
-command 2 infer-session | 2 detect-missed-gym-log
-event 2 session-inferred | 2 gym-log-missing
-read 2 Inferred Session awaiting confirmation | 2 Gym Session awaiting lifting Results
+extern 2 Claude Code (athlete's subscription) via MCP
+command 2 record-activation
+event 2 activation-recorded | 2 activation-rejected
+read 2 Exercise catalog
+extern 2 Open exercise dataset
 
-ui 3 Chat message + web push: confirm Inferred Session (yoga type on confirm)
-command 3 confirm-inferred-session | 3 reject-inferred-session
-event 3 inferred-session-confirmed | 3 inferred-session-rejected
+command 3 save-plan
+event 3 plan-saved | 3 plan-rejected
+read 3 Plan
 
-ui 4 Session view: correct or add a run
-command 4 correct-run | 4 add-run
-event 4 run-corrected | 4 run-added
+read 4 Next Session
+ui 4 Session view: next Session | 4 Session view: Plan out of date banner
 
-ui 5 Session view: log lifting Results (Hevy-like) | 5 Chat message + web push: log the gym Session, or Skip (that evening, then daily)
-command 5 log-lifting-results | 5 skip-gym-log
-event 5 lifting-results-logged | 5 gym-log-skipped
-read 5 History (Sessions, Results per Exercise, body signals) | 5 Gym Session awaiting lifting Results
+ui 5 Session view: log sets
+command 5 log-session
+event 5 session-logged | 5 session-rejected
+read 5 History | 5 Exercise progress
 
-ui 6 Chat | 6 Chat: confirm proposed Setup change | 6 App opened
-extern 6 Chat LLM: GPT-6 Sol via Vercel AI Gateway (tools: Setup, today's inputs, resolve-consult, run-check-in)
-command 6 confirm-setup-change | 6 record-check-in-inputs | 6 end-chat
-event 6 setup-changed | 6 check-in-inputs-recorded | 6 chat-ended
-read 6 Setup (Plan, Qualities, Injuries, Exclusions) | 6 Today's inputs (Readiness, Declarations, day-of Exclusions) | 6 Chat transcript (kept, not re-sent)
-
-command 7 run-check-in
-event 7 pick-made | 7 consult-raised | 7 inferred-session-confirmed
-read 7 Exercise catalog (Exercises, yoga types, Activation on Muscles)
-extern 7 Open exercise dataset (free-exercise-db / wger) + Activation research
-
-read 8 Pick (Session or Inactivity) | 8 Check-in already ran today (today's Pick exists)
-ui 8 Session view: see the Pick (next Session) | 8 Chat message + web push: the Pick | 8 Chat message: consult (buttons: keep, drop, re-pick; or reply in words)
-command 8 resolve-consult | 8 run-check-in
-event 8 consult-resolved
-
-flow extern.1 -> ui.1 -> command.1 -> event.1 -> command.2 -> event.2 -> read.2 -> ui.3
-flow ui.3 -> command.3.1 -> event.3.1
-flow ui.3 -> command.3.2 -> event.3.2
-flow ui.4 -> command.4.1 -> event.4.1
-flow ui.4 -> command.4.2 -> event.4.2
-flow ui.5 -> command.5 -> event.5 -> read.5
-flow event.1 -> command.2.2 -> event.2.2 -> read.2.2 -> ui.5.2
-flow ui.5.2 -> ui.5.1
-flow ui.5.2 -> command.5.2 -> event.5.2 -> read.5
+flow ui.1 -> command.1 -> event.1 -> read.1
+flow extern.2.1 -> command.2 -> event.2.1 -> read.2
+flow command.2 -> event.2.2
+flow extern.2.2 -> read.2
+flow read.1 -> extern.2.1
+flow read.2 -> command.3
+flow extern.2.1 -> command.3
+flow command.3 -> event.3.1 -> read.3 -> read.4 -> ui.4.1
+flow command.3 -> event.3.2
+flow read.3 -> ui.4.2
+flow ui.4.1 -> ui.5 -> command.5 -> event.5.1 -> read.5.1
 flow event.5.1 -> read.5.2
-flow event.5.2 -> read.5.2
-flow state.1 -> read.5
-flow event.3.1 -> read.5
-flow event.3.2 -> read.5
-flow event.4.1 -> read.5
-flow event.4.2 -> read.5
-flow ui.6.1 -> extern.6 -> ui.6.2 -> command.6.1 -> event.6.1 -> read.6.1
-flow extern.6 -> command.6.2 -> event.6.2 -> read.6.2
-flow read.6.1 -> extern.6
-flow read.6.2 -> extern.6
-flow ui.6.1 -> command.6.3 -> event.6.3 -> read.6.3
-flow event.1 -> command.7
-flow ui.6.1 -> command.7
-flow read.5 -> command.7
-flow read.6.1 -> command.7
-flow read.6.2 -> command.7
-flow command.7 -> event.7.3
-flow command.7 -> event.7 -> read.8 -> ui.8
-flow read.8 -> ui.8.2
-flow extern.7 -> read.7 -> command.7
-flow event.2 -> command.7
-flow command.7 -> event.7.2 -> ui.8.3 -> command.8 -> event.8 -> command.8.2
-flow extern.6 -> command.8
-flow event.1 -> state.1
-flow read.1 -> command.1
-flow event.7 -> read.8.2
-flow extern.6 -> command.7
-flow ui.2 -> command.2.2
-flow ui.6.3 -> command.6.3
+flow command.5 -> event.5.2
 
-start extern.1, ui.2, ui.6.3, ui.4, ui.5, ui.6.1, extern.7
-end read.6.3
+start ui.1, extern.2.1, extern.2.2
+end event.2.2, event.3.2, event.5.2, read.5.1, read.5.2
 
-slice 1 given a scheduled iOS Shortcut POSTs the last ~36 hours of Health samples | when sync-health-data | then health-data-synced + Health samples stored; a re-sent sample (same type, start, end, source) is stored once, a corrected value replaces it; triggers Check-in only if it carries last night's sleep and Check-in has not already run today
-slice 2 given a synced Health workout record for a run or yoga (written by Garmin/Amazfit) | when infer-session | then session-inferred + Inferred Session awaiting confirmation
-slice 2b given synced gym workout heart-rate data and no lifting Results logged for it | when detect-missed-gym-log | then gym-log-missing + Gym Session awaiting lifting Results (checked on each sync and on app open; nag: Chat message + web push that evening via the 21:00 sync, then once a day until logged or Skipped)
-slice 3a given an Inferred Session awaiting confirmation (yoga: the athlete picks its type) | when confirm-inferred-session | then inferred-session-confirmed + History
-slice 3b given an Inferred Session awaiting confirmation | when reject-inferred-session | then inferred-session-rejected + it leaves History
-slice 4a given an inferred run with wrong time or speed | when correct-run | then run-corrected + History
-slice 4b given a run no device recorded | when add-run | then run-added + History
-slice 5 given a completed lifting Session | when log-lifting-results | then lifting-results-logged + History
-slice 5b given a Gym Session awaiting lifting Results | when skip-gym-log | then gym-log-skipped + nagging stops; the gym Session stays in History with heart-rate exertion, no Results, no Classification
-slice 6a given the athlete confirms a Setup change the Chat LLM proposed | when confirm-setup-change | then setup-changed + Setup
-slice 6b given the athlete gives Readiness, a Declaration or a day-of Exclusion in Chat | when record-check-in-inputs | then check-in-inputs-recorded + Today's inputs
-slice 6c given an open Chat, and the athlete taps Done, or the app is opened after it sat idle 30 minutes | when end-chat | then chat-ended + Chat transcript (kept, not re-sent); the next Chat starts fresh
-slice 7 given the first sync of the day carrying last night's sleep (Check-in not yet run today), the athlete asks in Chat, or the Chat LLM calls it as a tool | when run-check-in | then pick-made + Pick (Chat message + web push), replacing any earlier Pick today; unanswered Inferred Sessions count as confirmed
-slice 7b given a Declaration clashes with the Pick, a Session is already in today's History, or a run is inferred after a Pick | when run-check-in | then consult-raised + Chat message: consult
-slice 8 given a consult in Chat, and the athlete taps keep, drop or re-pick, or replies in words (the Chat LLM calls resolve-consult) | when resolve-consult | then consult-resolved
+slice 1a
+  where the Setup form holds a Goal, Injury notes and standing Exclusions
+  when  save-setup
+  then  setup-saved
+slice 1b given setup-saved | then Setup
+slice 1c
+  given plan-saved, setup-saved
+  where Setup was saved after the Plan
+  then  Plan
+slice 2a
+  given Open exercise dataset
+  where Claude sends weights on Muscles for a catalog Exercise or yoga type
+  when  record-activation
+  then  activation-recorded
+slice 2b
+  where the Exercise is not in the catalog, or a weight is outside 0..1
+  when  record-activation
+  then  activation-rejected
+slice 2c given activation-recorded | then Exercise catalog
+slice 3a
+  given setup-saved, activation-recorded
+  where every Exercise is in the catalog with Activation, needs no standing-Excluded kit, and has sane sets and rep range
+  when  save-plan
+  then  plan-saved
+slice 3b
+  given setup-saved
+  where an Exercise is unknown, lacks Activation, needs excluded kit, or has bad sets or rep range
+  when  save-plan
+  then  plan-rejected
+slice 3c given plan-saved | then Plan
+slice 4a
+  given plan-saved
+  where no Session has been logged; each Exercise appears for the first time
+  then  Next Session
+slice 4b
+  given plan-saved, session-logged
+  where the last logged Session was the Plan's first; its Exercises hit the top of the range for the 3rd time in a row
+  then  Next Session
+slice 5a
+  given plan-saved
+  where sets logged for the next Session, some Exercises skipped
+  when  log-session
+  then  session-logged
+slice 5b
+  where no Plan exists, or a logged Exercise is not in the next Session
+  when  log-session
+  then  session-rejected
+slice 5c given session-logged | then History
+slice 5d
+  given session-logged
+  where fewer sets than prescribed on one Exercise, another skipped
+  then  Exercise progress
 ```

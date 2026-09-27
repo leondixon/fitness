@@ -11,7 +11,7 @@ effort: hard
 
 **Touches:** S2 Check-in judgment module (snapshot → Pick | Consult); run-check-in route and triggers (sync, ask, Chat tool); Pick schema and "Check-in already ran today"; Session view Pick display
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] Check-in produces a Pick even when the sleep score is missing.
 - [ ] The first sync carrying last night's sleep runs Check-in once; later syncs that day never re-trigger it; asking, or the Chat LLM tool, runs it again and the new Pick replaces the old one.

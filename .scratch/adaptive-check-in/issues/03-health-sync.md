@@ -11,7 +11,7 @@ effort: medium
 
 **Touches:** sync-health-data route and payload contract; Health samples schema; body-signal reads for History; Shortcut setup doc
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] sync-health-data stores sleep, HRV, Composition, heart rate and workout samples as health-data-synced.
 - [ ] A sample is identified by (type, start, end, source): a re-sent sample is stored once; a corrected value replaces the stored one.

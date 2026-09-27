@@ -11,7 +11,7 @@ effort: hard
 
 **Touches:** Chat routes and streaming; Chat LLM adapter (AI SDK; mock model in tests); tool definitions for Setup and today's inputs; Today's inputs schema; Chat transcript schema; app messages and web-push sender adapter plus push subscription; Chat view
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] The Chat LLM is GPT-6 Sol (standard, not Flex) via Vercel AI Gateway; tests script its tool calls with the AI SDK mock model at S1.
 - [ ] A Setup change proposed in Chat is saved (setup-changed) only after the athlete confirms it.

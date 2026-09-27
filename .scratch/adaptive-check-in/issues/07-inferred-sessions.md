@@ -11,7 +11,7 @@ effort: medium
 
 **Touches:** infer-session on sync; confirm/reject/correct/add routes; Inferred Session state in History; auto-confirm hook in run-check-in; Session view run and confirm UI
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] Every sync turns new running and yoga workout records into Inferred Sessions; a workout already known is not inferred twice. Raw heart rate is not mined.
 - [ ] The athlete is asked in Chat (with web push) to confirm or reject; yoga's type is picked on confirm and becomes its Results label with the inferred duration.

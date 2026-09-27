@@ -11,7 +11,7 @@ effort: medium
 
 **Touches:** S2 judgment module rules (fatigue, same-group strength, load cut, Hold); Pick shape gains Hold
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] Fatigue follows overlapping Muscle Activation, not the Quality and not the Working-group label alone.
 - [ ] Strength may stack on consecutive days across different Working groups; the same Working group at strength may not.

@@ -11,7 +11,7 @@ effort: medium
 
 **Touches:** detect-missed-gym-log on sync and app open; skip-gym-log route; awaiting-log state; nag via app messages; Session view Skip
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] Every sync, and every app open, finds gym workouts with no lifting Results.
 - [ ] The nag goes out with the 21:00 sync that evening, then once a day; there is no cron.

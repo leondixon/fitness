@@ -11,7 +11,7 @@ effort: low
 
 **Touches:** S2 judgment module Flag rule; Pick shape gains Flag; Flag shown with the Pick
 
-**Status:** ready for agent
+**Status:** needs triage (re-grill against the Plan model, ADR-0015)
 
 - [ ] Composition (weight, body-fat %, muscle mass) may Flag overeating when a two-week Trend shows weight up as fat, not muscle.
 - [ ] One weigh-in never Flags.
