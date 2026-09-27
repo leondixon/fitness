@@ -1,6 +1,6 @@
 # Fitness
 
-Personal training context: one athlete, a general-fitness Goal held as Qualities. Today's Session is generated at Check-in. There is no backlog of future Sessions. Picks require an Activation map.
+Personal training context: one athlete, a general-fitness Goal held as Qualities. The athlete trains through a Plan: a repeatable rotation of Sessions done in order, whose loads and reps progress from Results. A Plan requires an Activation map.
 
 ## Intention
 
@@ -17,7 +17,7 @@ The last five completed Training Sessions, newer weighted higher, used to see wh
 _Avoid_: rolling average, weekly split, five calendar days
 
 **Setup**:
-The persisted capture of the Plan, including Injuries. Filled before daily Check-ins. The athlete may update it whenever.
+The athlete's standing Goal, Injuries, and standing Exclusions. Filled before the first Plan and updated whenever; a change after a Plan exists makes that Plan stale until a new one is made.
 _Avoid_: onboarding, profile, pre-screen (as the domain term)
 
 **Pick**:
@@ -55,6 +55,14 @@ _Avoid_: movement, lift (as the catalog unit)
 Long-horizon progression of Results for an Exercise (monthly, from all History). A few recent Sessions must not define it. Used to infer expected growth and to inform load, including on related Exercises.
 _Avoid_: progress, PR, last-three average
 
+**Progression**:
+How an Exercise's prescription moves within a Plan: the target climbs by a rep at a time through its rep range, and after every set reaches the top in three Sessions in a row, the load rises one step and the target returns to the bottom. Two Sessions in a row below the range drop the load one step.
+_Avoid_: overload (as the noun for the rule), PR chase
+
+**Calibration**:
+An Exercise's first appearance: the Session prescribes sets and target reps but no load, and the load the athlete logs starts its Progression.
+_Avoid_: test day, max test
+
 **Composition**:
 Weight, body-fat %, and muscle mass as a coarse body signal. Not accurate enough to be a Goal.
 _Avoid_: Hume, scale, body comp (as product aims)
@@ -72,13 +80,13 @@ How heavily a Session contributes fatigue, derived from Activation (and from yog
 _Avoid_: difficulty, effort (when the domain fact is fatigue contribution)
 
 **Plan**:
-The standing Goal, Qualities, Constraints, and Injuries, persisted in Setup. Not a list of future Sessions. Not a calendar.
-_Avoid_: program, routine, workout plan, backlog, schedule, platter
+A repeatable rotation of Sessions (e.g. Upper A / Lower B), each with its Exercises, sets and rep range, done strictly in order. Not dated and not a calendar: the next Session is the one after the last logged. Designed from Setup; replaced, not edited.
+_Avoid_: program, routine, split, workout plan, schedule, platter
 
 ## Work
 
 **Session**:
-Today's chunk of work, generated at Check-in, or already performed. Not pinned to a calendar day ahead of time. It acquires a date when it is done, Declared, or inferred.
+A chunk of work: one entry of the Plan's rotation, or one already performed. Not pinned to a calendar day ahead of time. It acquires a date when it is done, Declared, or inferred.
 _Avoid_: workout, today's workout (as if the calendar owned it)
 
 **Check-in**:
