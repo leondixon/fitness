@@ -1,6 +1,6 @@
 # Fitness
 
-A personal training coach for one athlete. Each day Check-in picks today's Session (or Inactivity) from the standing Plan, History and body signals, keeping the general-fitness Qualities from starving.
+A personal training log that progresses itself. You describe your Goal and Injuries, Claude designs a Plan (a rotation of Sessions) through the app's MCP server, and each Session prescribes load and reps by double progression from what you logged.
 
 You own architecture and contracts. Agents write the code. Vocabulary lives in [`CONTEXT.md`](CONTEXT.md); decisions in [`docs/adr/`](docs/adr/).
 
@@ -9,9 +9,9 @@ You own architecture and contracts. Agents write the code. Vocabulary lives in [
 Settled in the LEON-25 grill; not built yet.
 
 - **Backend** (`apps/api`): Hono on Vercel Functions, Drizzle on Neon Postgres, Vitest. Single athlete, static device token.
-- **Web app** (`apps/web`): SvelteKit, installed to the iPhone home screen, with a Chat view and a Session view and web push.
-- **Health data**: your own scheduled iOS Shortcuts post Apple Health samples to the backend (ADR-0013). There is no native app.
-- **Chat LLM**: GPT-6 Sol via Vercel AI Gateway. The Pick itself is deterministic code (ADR-0014).
+- **Web app** (`apps/web`): SvelteKit, installed to the iPhone home screen, with a Setup form, a Session view and History.
+- **Plan design**: no LLM in the app. Claude Code on your own subscription connects to the backend's MCP server to research Activation and save a Plan, which the backend validates (ADR-0015).
+- **Progression**: deterministic double progression in code (ADR-0015).
 
 ## Local checkout
 
