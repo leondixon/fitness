@@ -54,4 +54,4 @@ Resume a run in a fresh chat with `/ship <ticket>`, e.g. `/ship LEON-25`. Run st
 
 ## Linear
 
-Team LEON, project Fitness app. Authenticate the Linear MCP when asked. Tickets publish there **and** to `.scratch/<slug>/`. If Linear is down, the local files are enough to continue. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+Team LEON, project Fitness app. Authenticate the Linear MCP when asked. Tickets publish there **and** to `.scratch/<slug>/`. If Linear is down, the local files are enough to continue. Overrides live in [`.claude/ship/tickets.md`](.claude/ship/tickets.md).

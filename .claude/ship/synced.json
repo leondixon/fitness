@@ -1,0 +1,53 @@
+{
+  "core": {
+    "code-review": {
+      "reviewers": [
+        "grok",
+        "claude"
+      ],
+      "grok-model": "grok-4.7-high",
+      "claude-model": "claude-opus-5-5",
+      "claude-effort": "high"
+    },
+    "drift-check": {},
+    "event-model": {
+      "board-png": true
+    },
+    "flow-provider": {
+      "provider": "code-flow",
+      "model": "",
+      "fallback-model": ""
+    },
+    "grill": {},
+    "implement": {
+      "commit-format": "conventional",
+      "ticket-id-prefix": true
+    },
+    "repo": {
+      "map": "CONTEXT-MAP.md",
+      "context": "CONTEXT.md",
+      "events": "EVENTS.md",
+      "adr": "docs/adr"
+    },
+    "review": {
+      "artifact-icon": "review"
+    },
+    "spec": {},
+    "tickets": {
+      "tracker": "Linear",
+      "team": "Personal",
+      "team-key": "LEON",
+      "project": "Harness tooling",
+      "mirror": ".scratch",
+      "initial-state": "Backlog",
+      "ready-label": "ready for agent",
+      "triage-labels": [
+        "needs triage",
+        "needs info",
+        "ready for agent",
+        "ready for human",
+        "wontfix"
+      ]
+    }
+  }
+}
