@@ -49,14 +49,14 @@ Table and column shapes beyond these fields are the implementer's, inside the se
 
 - First cut only (ADR-0015). Health sync, Chat, web push, Inferred Sessions, missed-log nag, fatigue and Holds, consult and Composition Flags move to a new epic for a re-grill.
 - Plan is redefined as the rotation (glossary). Sessions are done strictly in order; no days, no Session length in Setup.
-- No LLM in the app. Claude Code on the athlete's subscription reads and writes through an MCP server served over Streamable HTTP from the Hono app; bearer = the static device token. MCP can read Setup, catalog, History with Lookback, Exercise progress, Plan with its stale flag and Next Session; it can write Setup, Activation and the Plan. Results are logged only in the Session view.
+- No LLM in the app. Claude Code on the athlete's subscription reads and writes through an MCP server served over Streamable HTTP from a SvelteKit `+server` route; bearer = the static device token. MCP can read Setup, catalog, History with Lookback, Exercise progress, Plan with its stale flag and Next Session; it can write Setup, Activation and the Plan. Results are logged only in the Session view.
 - Activation research is Claude's, written through MCP; a Plan cannot use an Exercise without Activation (ADR-0007).
 - save-plan validates the whole Plan: every Exercise in the catalog with Activation, none needing standing-Excluded kit, sets and rep range sane (sets ≥ 1, 1 ≤ bottom ≤ top). Any error rejects it all, listing every error for Claude to fix.
 - Double progression: +1 rep target within the range; every set at the top in 3 Sessions in a row → next time +1 load step and target back to the bottom; 2 Sessions in a row below the bottom → −1 load step. A skipped Exercise leaves its streak untouched; fewer sets than prescribed is a miss.
 - Load steps in kg by kit: barbell +2.5, dumbbell +2 per hand, machine or cable +5; bodyweight progresses by reps only.
 - Calibration: first appearance prescribes sets × bottom-of-range reps with no load; the logged load seeds progress.
 - Runs and yoga are assumed to happen outside the app. Classification (≤5-rep majority) and the 5-Session Lookback are kept for History and MCP.
-- Stack: Hono on Vercel Functions, Drizzle on Neon Postgres, Vitest; SvelteKit home-screen web app; pnpm monorepo `apps/api` + `apps/web`, no shared types package.
+- Stack: one SvelteKit app at the repo root (home-screen web app, `+server` routes and the MCP endpoint) with Drizzle on Neon Postgres on Vercel, tested with Vite+; no separate backend, no monorepo, no API client; a static device token, also the MCP bearer (ADR-0016).
 - Boundaries: the Setup form, Claude Code and the open dataset are starts; rejected events are ends.
 
 ## Slices
@@ -81,9 +81,9 @@ Table and column shapes beyond these fields are the implementer's, inside the se
 
 | Seam | Where | Status | Slices |
 |---|---|---|---|
-| **S1 Backend HTTP interface, including MCP.** Tests call the Hono app in-process against a real Postgres in Docker; MCP tools are exercised with the MCP SDK client against the in-process endpoint. The clock is an adapter. | `apps/api` | new | all |
-| **S2 Progression**, a pure module: an Exercise's sets, rep range, load step and its logged history in the Plan → the next prescription (load and target reps, or Calibration). No database, no clock. | `apps/api` | new | 4a, 4b, 5d |
-| **S3 Web views.** Svelte component tests with the API client faked: Setup form, Session view (next Session, logging, stale banner), History. Plus a dev script and browser-MCP config so an agent can drive the running app. | `apps/web` | new | 1a, 1c, 4a, 5a, 5c |
+| **S1 Server interface, including MCP.** Tests call the form actions, `+server` routes and `load` functions in-process against a real Postgres in Docker; MCP tools are exercised with the MCP SDK client against the in-process endpoint. The clock is an adapter. | `src/` server code | new | all |
+| **S2 Progression**, a pure module: an Exercise's sets, rep range, load step and its logged history in the Plan → the next prescription (load and target reps, or Calibration). No database, no clock. | `src/` server code | new | 4a, 4b, 5d |
+| **S3 Web views.** Svelte component tests over `load` data: Setup form, Session view (next Session, logging, stale banner), History. Plus a dev script and browser-MCP config so an agent can drive the running app. | `src/` routes | new | 1a, 1c, 4a, 5a, 5c |
 
 ## Appendix: the fence
 
@@ -116,17 +116,18 @@ subtitle LEON-25 first cut
 #   picks a weight and logs what they did, which seeds its progress.
 # - Runs and yoga are assumed to happen outside the app; the Plan covers lifting.
 # - Classification (<=5-rep majority) and the 5-Session Lookback are kept and shown in History, and readable via MCP.
-# - Stack: Hono on Vercel, Drizzle on Neon Postgres, Vitest; SvelteKit home-screen web app; MCP over Streamable HTTP
-#   from the same Hono app.
+# - Stack: one SvelteKit app on Vercel, Drizzle on Neon Postgres, Vite+; no separate backend; MCP over Streamable HTTP
+#   from a +server route.
 
 # seams
-# - S1 (new) backend HTTP interface, including the MCP endpoint: tests call the Hono app in-process against a real
-#   Postgres in Docker; MCP tools are exercised with an MCP SDK client over the in-process transport. apps/api.
+# - S1 (new) server interface, including the MCP endpoint: tests call form actions, +server routes and load functions
+#   in-process against a real Postgres in Docker; MCP tools are exercised with an MCP SDK client over the in-process
+#   transport. src/ server code.
 #   Slices 1-6.
 # - S2 (new) progression, a pure module: an Exercise's sets, rep range, load step and its logged history in the Plan ->
-#   the next prescription (load and target reps, or calibration). No database, no clock. apps/api. Slices 5, 6.
-# - S3 (new) web views: Svelte component tests with the API client faked, for the Setup form, the Session view (next
-#   Session, logging, stale banner) and History; plus a dev script and browser-MCP config. apps/web. Slices 1, 5, 6.
+#   the next prescription (load and target reps, or calibration). No database, no clock. src/ server code. Slices 5, 6.
+# - S3 (new) web views: Svelte component tests over load data, for the Setup form, the Session view (next
+#   Session, logging, stale banner) and History; plus a dev script and browser-MCP config. src/ routes. Slices 1, 5, 6.
 
 step 1 Athlete fills in Setup
 step 2 Claude records Activation research

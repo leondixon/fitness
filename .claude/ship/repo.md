@@ -8,7 +8,7 @@ A personal training log. TypeScript, one SvelteKit app at the repo root: the hom
 
 ## Seams
 
-Tests sit at the public boundaries: the SvelteKit HTTP routes, the MCP tools (exercised with the MCP SDK client in-process), and the Svelte component views with the API client faked. The progression rule is a pure module tested directly. The clock is an adapter.
+Tests sit at the public boundaries: the SvelteKit HTTP routes, the MCP tools (exercised with the MCP SDK client in-process), and the Svelte component views over `load` data. The progression rule is a pure module tested directly. The clock is an adapter.
 
 ## Domain layout
 

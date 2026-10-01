@@ -39,4 +39,4 @@ Covered by the children.
 
 - Data movement: `.scratch/daily-check-in/event-model.md` (also a Linear document on this issue). It has the commands, events, slices and seams S1–S3.
 - Glossary: `CONTEXT.md` (Plan redefined; Progression and Calibration added). Decisions: `docs/adr/`, especially ADR-0015.
-- Stack: Hono on Vercel Functions, Drizzle, Neon Postgres, Vitest; SvelteKit home-screen web app; a pnpm monorepo `apps/api` + `apps/web` with no shared types package; a static device token, also the MCP bearer.
+- Stack: one SvelteKit app at the repo root (home-screen web app, `+server` routes and the MCP endpoint) with Drizzle on Neon Postgres on Vercel, tested with Vite+; no separate backend, no monorepo, no API client; a static device token, also the MCP bearer (ADR-0016).

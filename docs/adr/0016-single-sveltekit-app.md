@@ -1,0 +1,3 @@
+# One SvelteKit app, no separate backend
+
+The app is a single SvelteKit project at the repo root on Vercel. Pages read and write Drizzle on Neon Postgres through `load` functions and form actions, the MCP endpoint is a `+server` route serving Streamable HTTP, and the static device token is checked once in `hooks.server.ts` for both. A separate Hono backend in an `apps/api` + `apps/web` monorepo was rejected: with one athlete it adds a second deploy and an API client between the UI and its own data for no benefit. The cost is that the UI cannot be tested against a faked API client; component tests run over `load` data and server behaviour is tested at the handlers.

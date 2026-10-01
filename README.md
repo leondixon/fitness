@@ -8,9 +8,8 @@ You own architecture and contracts. Agents write the code. Vocabulary lives in [
 
 Settled in the LEON-25 grill; not built yet.
 
-- **Backend** (`apps/api`): Hono on Vercel Functions, Drizzle on Neon Postgres, Vitest. Single athlete, static device token.
-- **Web app** (`apps/web`): SvelteKit, installed to the iPhone home screen, with a Setup form, a Session view and History.
-- **Plan design**: no LLM in the app. Claude Code on your own subscription connects to the backend's MCP server to research Activation and save a Plan, which the backend validates (ADR-0015).
+- **App**: one SvelteKit app at the repo root on Vercel, installed to the iPhone home screen, with a Setup form, a Session view and History. `load` functions and form actions read and write Drizzle on Neon Postgres directly; the MCP endpoint is a `+server` route. Single athlete, static device token. Vite+ (`vp`) for test, lint and typecheck.
+- **Plan design**: no LLM in the app. Claude Code on your own subscription connects to the app's MCP endpoint to research Activation and save a Plan, which the backend validates (ADR-0015).
 - **Progression**: deterministic double progression in code (ADR-0015).
 
 ## Local checkout

@@ -5,11 +5,11 @@ effort: hard
 
 # 02: Exercise catalog, MCP server and Activation
 
-**What to build:** The Exercise catalog is seeded from an open dataset (e.g. free-exercise-db or wger) with each Exercise's kit and Working group. The backend exposes an MCP server that Claude Code connects to with the device token: it can read Setup and the catalog, write Setup, and record Activation weights on Muscles for an Exercise or yoga type, which is how you do the Activation research through Claude. Slices 2a, 2b, 2c.
+**What to build:** The Exercise catalog is seeded from an open dataset (e.g. free-exercise-db or wger) with each Exercise's kit and Working group. The app exposes an MCP endpoint that Claude Code connects to with the device token: it can read Setup and the catalog, write Setup, and record Activation weights on Muscles for an Exercise or yoga type, which is how you do the Activation research through Claude. Slices 2a, 2b, 2c.
 
 **Blocked by:** 01 Walking skeleton and Setup form (LEON-28).
 
-**Touches:** catalog seed data and loader; catalog and Activation schema; MCP endpoint (Streamable HTTP on the Hono app, bearer = device token) with read-setup, save-setup, read-catalog and record-activation tools; MCP test harness (MCP SDK client in-process); a short doc on adding the MCP server to Claude Code
+**Touches:** catalog seed data and loader; catalog and Activation schema; MCP endpoint (Streamable HTTP in a SvelteKit `+server` route, bearer = device token) with read-setup, save-setup, read-catalog and record-activation tools; MCP test harness (MCP SDK client in-process); a short doc on adding the MCP server to Claude Code
 
 **Status:** ready for agent
 
